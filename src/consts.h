@@ -48,7 +48,7 @@
 #define CMD_TEST_SWEEP              0x0C
 
 #define TEST_PACKET_INTERVAL_MS 1000
-#define NUM_TEST_PACKETS        10
+#define NUM_TEST_PACKETS        3
 #define IMU_DATA_LEN            6
 #define GYRO_CALIB_PARAM_LEN    12
 #define MEM_CONFIG_PAGE         0x100
