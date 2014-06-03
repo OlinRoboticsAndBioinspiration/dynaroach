@@ -1,0 +1,30 @@
+Debugging Guide:
+
+Serial Communications:
+
+General failure to program:
+	Unplug board, plug back in.  Repeat with radio. 
+	Check if lights on board are on appropriately (all on as of latest revision). If not, issue is at board. Use MpLab and ICD3 to reprogram bootloader.  
+
+Nonetype has no attribute "write":
+	Change the USB port in your bootload line to the radio USB (probably ttyUSB#). If USB1, etc. don't work, make sure that any process that might be using the port (Python seems to be most likely, espec. when you're doing test/code change cycles) has completely finished. 
+
+Process hangs with an "Unknown device is found", then "Done"
+	Check destination address in /bootloader/imageproc/host/bootloader2.py
+
+Process hangs with DEBUG /command... Done
+	Check that your board is set up to communicate with the radio you are using.  If it is not, find the correct radio and use that to reprogram you board with the address of the radio you want. This is controlled through a macro in the SConstruct file, under CFLAGS- check that you are using the correct macro for your board.  Macros are named after the corresponding board.
+
+	orange radio = x0100, works with board C5 (address x00 x15)
+	white radio = x0101, works with board C2 (address x20 x02)
+
+Echo/testLED not working:
+	Use sniffer and ZENA (installed on lab computer) to check if messages are being sent and where.  Only the first few columns are relevant. If destination address is wrong (i.e.  not that of the board) change the address in dynaroach.py and reload the module or reinstantiate your DynaRoach object with the correct address. 
+	If the board is sending data, but to the wrong address, reprogram it over the radio with the correct macro. 
+
+Errors appear after reprogramming the bootloader with ICD3:
+	The bootloader sets some default network addresses for the board (radio 0101, the white radio, and address 2002). Use that radio/address combination to reset the board's radio/address to what you want. 
+
+
+
+
