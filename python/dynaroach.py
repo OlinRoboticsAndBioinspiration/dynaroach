@@ -21,7 +21,7 @@ from lib.basestation import BaseStation
 from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
-DEFAULT_DEST_ADDR = '\x01/x15'
+DEFAULT_DEST_ADDR = '\x00\x12'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -38,7 +38,6 @@ XL_CNTS_PER_G       = 256.0
 G                   = 9.81
 BEMF_VOLTS_PER_CNT  = 3.3/512
 VBATT_VOLTS_PER_CNT = 3.3/512
-
 
 class DynaRoach(object):
     '''Class representing the dynaRoACH robot'''
@@ -78,7 +77,6 @@ class DynaRoach(object):
         data = pld.data
         for callback in self.receive_callback:
             callback(pld)
-
         if typeID == cmd.TEST_ACCEL or typeID == cmd.TEST_GYRO:
             print unpack('<3h', data)
         elif typeID == cmd.TEST_DFLASH:
@@ -102,7 +100,6 @@ class DynaRoach(object):
               datum = list(unpack('<L3f3h2HB4H', data))
               # print datum[6:]
 
-
     def echo(self):
         '''
         Description:
@@ -119,9 +116,22 @@ class DynaRoach(object):
             self.radio.send(0, cmd.ECHO, data_out)
             time.sleep(0.2)
             self.print_packet(self.last_packet)
+            packet = self.last_packet
+
+            assert (packet is not None), "Radio test failed. No packet received."
+            
+            pld = Payload(packet.get('rf_data'))
+            typeID = pld.type
+            data = pld.data
+
+            assert (data == data_out), "Radio test failed, incorrect data received."
+
             print('\n')
             print('\n')
             time.sleep(1)
+            self.last_packet = None
+
+        print ("Radio working.")
 
     def set_motor_config(self, rising_duty_cycle, falling_duty_cycle):
       '''
@@ -196,6 +206,7 @@ class DynaRoach(object):
 
         print("Testing gyroscope...")
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
+
 
     def test_accel(self):
         '''
