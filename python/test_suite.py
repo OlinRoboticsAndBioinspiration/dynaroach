@@ -61,7 +61,7 @@ class TestSuite():
         if dev_name == "" or dev_name == None:
             print "You did not instantiate the class with a device name " + \
                     "(eg. COM5, /dev/tty.usbserial)."
-            sys.exit()
+            sys.exit(1)
 
         if dest_addr == '\xff\xff':
             print "Destination address is set to broadcast. You will " +\
@@ -117,45 +117,45 @@ class TestSuite():
             the results of a radio test. The results should be the
             receipt of three packets. The payloads of those three packets
             should print as consecutive integers 0-9, 10-19, and 20-29
-            respectively. 
+            respectively.
         '''
 
         header = chr(kStatusUnused) + chr(kTestRadioCmd)
         for i in range(1, 4):
-            data_out = header + ''.join([chr(datum) for datum in range((i-1)*10,i*10)])
-            print data_out
-            print("Transmitting packet " + str(i) + "...")
+            nums = ''.join([chr(datum) for datum in range((i-1)*10,i*10)])
+            data_out = header +nums
+            #print("\nTransmitting packet " + str(i) + "...")
             if(self.check_conn()):
                 self.radio.tx(dest_addr=self.dest_addr, data=data_out)
                 time.sleep(0.2)
-                self.print_packet(self.last_packet)
+                #self.print_packet(self.last_packet)
             time.sleep(1)
 
-    def test_gyro(self):
+    def test_gyro(self, num_test_packets):
         '''
         Description:
             Read the XYZ values from the gyroscope.
         '''
 
-        data_out = chr(kStatusUnused) + chr(kTestGyroCmd)
+        data_out = chr(kStatusUnused) + chr(kTestGyroCmd) + chr(num_test_packets)
 
-        if(self.check_conn()):
+        if self.check_conn():
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
-            time.sleep(0.5)
+            time.sleep(num_test_packets * 0.5)
 
-    def test_accel(self):
+    def test_accel(self, num_test_packets):
         '''
         Description:
             Read the XYZ values from the accelerometer.
         '''
 
-
-        data_out = chr(kStatusUnused) + chr(kTestAccelCmd)
+        data_out = chr(kStatusUnused) + chr(kTestAccelCmd) + chr(num_test_packets)
 
         packets_received = 0
         prev_data = None
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
+            time.sleep(num_test_packets * 0.5)
 
     def test_dflash(self):
         '''
@@ -167,6 +167,7 @@ class TestSuite():
         data_out = chr(kStatusUnused) + chr(kTestDFlashCmd)
         if(self.check_conn()):
             self.radio.tx(dest_addr=self.dest_addr, data=data_out)
+            time.sleep(1)
 
     def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
         '''
@@ -177,9 +178,9 @@ class TestSuite():
             time        : The amount of time to turn the motor on for (in
                           seconds)
             duty_cycle  : The duty cycle of the PWM signal used to control the
-                          motor in percent (0 - 100) 
+                          motor in percent (0 - 100)
             direction   : The direction to spin the motor. There are *three*
-                          options for this parameter. 0 - reverse, 1 - forward, 
+                          options for this parameter. 0 - reverse, 1 - forward,
                           2 high impedance motor controller output = braking
             return_emf  : Send the back emf readings over the radio channel.
         '''
@@ -250,7 +251,5 @@ class TestSuite():
         Description:
             Clean up the connection when the object is deleted.
         '''
-        try:
-            self.conn.close()
-        except AttributeError:
-            pass
+        self.radio.halt()
+        self.conn.close()
