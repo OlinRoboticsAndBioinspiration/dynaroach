@@ -79,7 +79,7 @@ static void cmdGetGyroCalibParam(unsigned char status, unsigned char length, uns
 static void cmdSetDataStreaming(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
-static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 //Delete these once trackable management code is working
 
@@ -561,7 +561,7 @@ static void cmdNop(unsigned char status, unsigned char length, unsigned char *fr
     Nop();//do nothing
 }
 
-static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type)
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type)
 {
     MacPacket packet;
     Payload pld;

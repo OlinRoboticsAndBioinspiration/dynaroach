@@ -17,5 +17,6 @@ extern unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
 
 void cmdSetup(void);
 void cmdHandleRadioRxBuffer(void);
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 #endif // __CMD_H

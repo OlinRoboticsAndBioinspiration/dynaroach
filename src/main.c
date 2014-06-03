@@ -34,8 +34,7 @@
 #include "sclock.h"
 #include "ppool.h"
 #include "spi_controller.h"
-#include "cmd.h"
-
+#include <stdio.h>
 
 void initDma0(void)
 {
@@ -52,6 +51,7 @@ void initDma0(void)
 }
 
 static void timer1Setup(void);
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 static void timer1Setup(void)
 {
@@ -143,7 +143,6 @@ int main ( void )
     timer2Setup();
     cmdSetup();
 
-
     attSetup(1.0/TIMER1_FCY);
     char j;
     for(j=0; j<6; j++){
@@ -155,10 +154,15 @@ int main ( void )
         delay_ms(100);
     }
 
-
     LED_1 = 1;
     LED_2 = 1;
     LED_3 = 1;
+
+    char frame[5];
+
+    send(STATUS_UNUSED, 5, frame, '4');
+    send(STATUS_UNUSED, 5, frame, '4');
+    send(STATUS_UNUSED, 5, frame, '4');
 
     //radioDeleteQueues();
     while(1){
