@@ -79,6 +79,7 @@ static void cmdGetGyroCalibParam(unsigned char status, unsigned char length, uns
 static void cmdSetDataStreaming(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 //Delete these once trackable management code is working
@@ -119,6 +120,7 @@ void cmdSetup(void)
     cmd_func[CMD_SET_MOTOR_CONFIG] = &cmdSetMotorConfig;
     cmd_func[CMD_RESET] = &cmdReset;
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
+    cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -448,6 +450,23 @@ static void cmdTestBatt(unsigned char status, unsigned char length, unsigned cha
     frame[3] = v_batt.cval[1];
 
     send(status, 4, frame, CMD_TEST_BATT);
+}
+
+static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char* frame){
+    
+    uByte2 bemf;
+
+    AD1CHS0bits.CH0SA = 0b00001;      //Select AN1 (back EMF) for sampling
+    AD1CON1bits.SAMP = 1;
+    while(!AD1CON1bits.DONE);
+    AD1CON1bits.SAMP = 0;
+    AD1CON1bits.DONE = 0;
+    bemf.sval = ADC1BUF0; 
+
+    frame[0] = bemf.cval[0];
+    frame[1] = bemf.cval[1];
+
+    send(status, 2, frame, CMD_GET_BACK_EMF);
 }
 
 /*****************************************************************************
