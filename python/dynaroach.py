@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x15'
+DEFAULT_DEST_ADDR = '\x00\x12'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -130,9 +130,6 @@ class DynaRoach(object):
             print("Transmitting data " + str(i) + "...")
             self.radio.send(0, cmd.ECHO, data_out)
             time.sleep(0.3)
-            #self.print_packet(self.last_packet)
-            time.sleep(0.2)
-            self.print_packet(self.last_packet)
 
             packet= self.last_packet
             assert (packet is not None), "Radio test failed. No packet received"
@@ -263,38 +260,37 @@ class DynaRoach(object):
         print("Testing data flash...")
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_DFLASH, [])
 
-#    def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
-#        '''
-#        Description:
-#            Turn on a motor.
-#        Parameters:
-#            motor_id    : The motor number to turn on
-#            time        : The amount of time to turn the motor on for (in
-#                          seconds)
-#            duty_cycle  : The duty cycle of the PWM signal used to control the
-#                          motor in percent (0 - 100) 
-#            direction   : The direction to spin the motor. There are *three*
-#                          options for this parameter. 0 - reverse, 1 - forward, 
-#                          2 high impedance motor controller output = braking
-#            return_emf  : Send the back emf readings over the radio channel.
-#        '''
-#
-#        if direction >= 2:
-#            direction = 2
-#        elif direction <= 0:
-#            direction = 0
-#        else:
-#            direction = 1
-#
-#
-#        if return_emf != 1:
-#            return_emf = 0
-#
-#        data_out = chr(cmd.STATUS_UNUSED) + chr(cmd.TEST_MOTOR) + chr(motor_id) + \
-#                   chr(time) + chr(duty_cycle) + chr(direction) + \
-#                   chr(return_emf)
-#        if(self.check_conn()):
-#            self.radio.tx(dest_addr=self.dest_addr, data=data_out)
+    def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
+        '''
+        Description:
+           Turn on a motor.
+       Parameters:
+            motor_id    : The motor number to turn on
+            time        : The amount of time to turn the motor on for (in
+                             seconds)
+            duty_cycle  : The duty cycle of the PWM signal used to control the
+                             motor in percent (0 - 100) 
+            direction   : The direction to spin the motor. There are *three*
+                             options for this parameter. 0 - reverse, 1 - forward, 
+                             2 high impedance motor controller output = braking
+            return_emf  : Send the back emf readings over the radio channel.
+        '''
+    
+        if direction >= 2:
+            direction = 2
+        elif direction <= 0:
+            direction = 0
+        else:
+            direction = 1
+    
+        if return_emf != 1:
+            return_emf = 0
+    
+        data_out = chr(cmd.STATUS_UNUSED) + chr(cmd.TEST_MOTOR) + chr(motor_id) + \
+                    chr(time) + chr(duty_cycle) + chr(direction) + \
+                    chr(return_emf)
+        if(self.check_conn()):
+            self.radio.tx(dest_addr=self.dest_addr, data=data_out)
 
 #    def test_sma(self, chan_id, time, duty_cycle):
 #        '''
