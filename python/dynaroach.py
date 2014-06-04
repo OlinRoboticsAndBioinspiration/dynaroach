@@ -39,6 +39,14 @@ G                   = 9.81
 BEMF_VOLTS_PER_CNT  = 3.3/512
 VBATT_VOLTS_PER_CNT = 3.3/512
 
+ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
+ACCEL_MAX = [(-180,0,130),(10,-185,140)]
+
+#GYRO_MAX =
+#GYRO_MIN =
+
+
+
 class DynaRoach(object):
     '''Class representing the dynaRoACH robot'''
 
@@ -67,6 +75,8 @@ class DynaRoach(object):
         self.radio = BaseStation(dev_name, baud_rate, dest_addr, self.receive)
         self.receive_callback = []
 
+        self.acc_res = [(0,0,0),(0,0,0)]
+
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
 
@@ -77,7 +87,9 @@ class DynaRoach(object):
         data = pld.data
         for callback in self.receive_callback:
             callback(pld)
-        if typeID == cmd.TEST_ACCEL or typeID == cmd.TEST_GYRO:
+        if typeID == cmd.TEST_ACCEL:
+            self.acc_res = unpack('<3h', data)
+        elif typeID == cmd.TEST_GYRO:
             print unpack('<3h', data)
         elif typeID == cmd.TEST_DFLASH:
             print ''.join(data)
@@ -111,17 +123,17 @@ class DynaRoach(object):
         '''
 
         for i in range(1, 4):
+            self.last_packet = None
             data_out = ''.join([chr(datum) for datum in range((i-1)*10,i*10)])
             print("Transmitting data " + str(i) + "...")
             self.radio.send(0, cmd.ECHO, data_out)
-            time.sleep(0.2)
-            self.print_packet(self.last_packet)
+            time.sleep(0.3)
+            #self.print_packet(self.last_packet)
             packet = self.last_packet
 
             assert (packet is not None), "Radio test failed. No packet received."
-            
+
             pld = Payload(packet.get('rf_data'))
-            typeID = pld.type
             data = pld.data
 
             assert (data == data_out), "Radio test failed, incorrect data received."
@@ -129,7 +141,6 @@ class DynaRoach(object):
             print('\n')
             print('\n')
             time.sleep(1)
-            self.last_packet = None
 
         print ("Radio working.")
 
@@ -215,7 +226,15 @@ class DynaRoach(object):
         '''
 
         print("Testing accelerometer...")
-        self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ACCEL, [])
+        for i in range(0,2):
+            print("Place the board in position "+ str(i+1))
+            time.sleep(2)
+            self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ACCEL, [])
+            time.sleep(.3)
+            assert (self.acc_res <= ACCEL_MAX[i]),"Test failed, accelerometer reading too high."
+            assert (self.acc_res >= ACCEL_MIN[i]), "Test failed, accelerometer reading too low."
+
+        print("Accelerometer working.")
 
     def test_dflash(self):
         '''
