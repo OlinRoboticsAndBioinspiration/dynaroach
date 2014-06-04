@@ -78,6 +78,7 @@ class DynaRoach(object):
 
         self.acc_res = [(0,0,0),(0,0,0)]
         self.gyro_res = [(0,0,0),(0,0,0)]
+        self.emf_res = 0
 
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
@@ -109,6 +110,9 @@ class DynaRoach(object):
         elif typeID == cmd.GET_GYRO_CALIB_PARAM:
             self.gyro_offsets = list(unpack('<fff', data))
             print(self.gyro_offsets)
+        elif typeID == cmd.GET_BACK_EMF:
+            print (unpack('H',data)[0])
+
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
@@ -123,7 +127,7 @@ class DynaRoach(object):
             should print as consecutive integers 0-9, 10-19, and 20-29
             respectively.
         '''
-
+        print("Testing radio.")
         for i in range(1, 4):
             self.last_packet = None
             data_out = ''.join([chr(datum) for datum in range((i-1)*10,i*10)])
@@ -254,6 +258,15 @@ class DynaRoach(object):
 
         print("Testing data flash...")
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_DFLASH, [])
+
+    def test_motor(self):
+        data = ''.join(chr(0) for i in range(2))
+        self.set_motor_config(.25,.5)#put this in an iterative loop?
+        print ("hi")
+        self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
+        time.sleep(.3)
+        self.set_motor_config(0,0)
+
 
     # def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
     #     '''
