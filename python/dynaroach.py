@@ -21,7 +21,8 @@ from lib.basestation import BaseStation
 from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
-DEFAULT_DEST_ADDR = '\x00\x12'
+
+DEFAULT_DEST_ADDR = '\x00\x15'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -127,8 +128,21 @@ class DynaRoach(object):
             data_out = ''.join([chr(datum) for datum in range((i-1)*10,i*10)])
             print("Transmitting data " + str(i) + "...")
             self.radio.send(0, cmd.ECHO, data_out)
+<<<<<<< HEAD
             time.sleep(0.3)
             #self.print_packet(self.last_packet)
+=======
+            time.sleep(0.2)
+            self.print_packet(self.last_packet)
+
+            packet= self.last_packet
+            assert (packet is not None), "Radio test failed. No packet received"
+            pld = Payload(packet.get('rf_data'))
+            typeID = pld.type
+            data = pld.data
+            assert (data ==data_out), "Radio test failed. Incorrect data"
+			
+>>>>>>> e0eb0dd8e924feb498ad2e7d4b0ba77fb336ebf6
             packet = self.last_packet
 
             assert (packet is not None), "Radio test failed. No packet received."
@@ -137,7 +151,6 @@ class DynaRoach(object):
             data = pld.data
 
             assert (data == data_out), "Radio test failed, incorrect data received."
-
             print('\n')
             print('\n')
             time.sleep(1)
