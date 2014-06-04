@@ -224,6 +224,7 @@ class DynaRoach(object):
 
         print("Testing gyroscope...")
         for i in range(0,3):
+			gyro_res = None;
             print("Put the board into the slit position x=1, y=2, z=3"+ str(i+1))
             time.sleep(2)
             self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
