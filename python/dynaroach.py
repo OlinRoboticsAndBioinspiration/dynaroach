@@ -225,7 +225,13 @@ class DynaRoach(object):
         '''
 
         print("Testing gyroscope...")
-        self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
+        for i in range(0,3):
+            print("Put the board into the slit position x=1, y=2, z=3"+ str(i+1))
+            time.sleep(2)
+            self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
+            time.sleep(.3)
+            assert (self.gyr_res <= GYRO_MAX[i]),"Test failed, accelerometer reading too high."
+            assert (self.gyr_res >= GYRO_MIN[i]), "Test failed, accelerometer reading too low."
 
 
     def test_accel(self):
