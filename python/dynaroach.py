@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -43,8 +43,8 @@ VBATT_VOLTS_PER_CNT = 3.3/512
 ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
 ACCEL_MAX = [(-180,0,130),(10,-185,140)]
 
-GYRO_MAX = [(-1140, 10, 0),(-120,-966,130),(250, 32, -1066)]
-GYRO_MIN = [(-1280, -506, -420),(-210,-1700,-90),(220, -90, -1760)]
+GYRO_MAX = [(-900, 100, 0),(-20,-800,200),(400, 100, -900)]
+GYRO_MIN = [(-1400 -600, -500),(-300,-1800,-150),(100, -100, -1900)]
 
 
 
@@ -92,7 +92,7 @@ class DynaRoach(object):
         if typeID == cmd.TEST_ACCEL:
             self.acc_res = unpack('<3h', data)
         elif typeID == cmd.TEST_GYRO:
-            self.gyro_res = unpack('<3h', data)
+            print unpack('<3h', data) #self.gyro_res = 
         elif typeID == cmd.TEST_DFLASH:
             print ''.join(data)
         elif typeID == cmd.TEST_BATT:
@@ -130,9 +130,9 @@ class DynaRoach(object):
             print("Transmitting data " + str(i) + "...")
             self.radio.send(0, cmd.ECHO, data_out)
             time.sleep(0.3)
-
             packet= self.last_packet
             assert (packet is not None), "Radio test failed. No packet received"
+            
             pld = Payload(packet.get('rf_data'))
             typeID = pld.type
             data = pld.data
@@ -210,17 +210,15 @@ class DynaRoach(object):
         Description:
             Read the XYZ values from the gyroscope.
         '''
-
         print("Testing gyroscope...")
-        gyro_res = None;
-        for i in range(0,3):
-            print("Put the board into the slit position /n (x=1 y=2 z=3) /n...position"+ str(i+1))
-            time.sleep(2)
-            self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
-            time.sleep(10)
-            assert (self.gyro_res <= GYRO_MAX[i]),"Test failed, position"+str(i+1)+"is too high"
-            assert (self.gyro_res >= GYRO_MIN[i]),"Test failed, position"+str(i+1)+"is too low"
-        print("Gyroscope Working.")
+        #for i in range(0,3):
+        #    print("Put the board into the slit position /n (x=1 y=2 z=3) /n...position"+ str(i+1))
+        #    time.sleep(2)
+        #    self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
+        #    time.sleep(0.3)
+            #assert (self.gyro_res <= GYRO_MAX[i]),"Test failed, position"+" "+str(i+1)+" "+"is too high"
+            #assert (self.gyro_res >= GYRO_MIN[i]),"Test failed, position"+" "+str(i+1)+" "+"is too low"
+        #print("Gyroscope Working.")
 
 
     def test_accel(self):
