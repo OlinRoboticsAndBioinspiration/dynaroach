@@ -43,8 +43,8 @@ VBATT_VOLTS_PER_CNT = 3.3/512
 ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
 ACCEL_MAX = [(-180,0,130),(10,-185,140)]
 
-#GYRO_MAX =
-#GYRO_MIN =
+GYRO_MAX = [(
+GYRO_MIN =
 
 
 
@@ -77,6 +77,7 @@ class DynaRoach(object):
         self.receive_callback = []
 
         self.acc_res = [(0,0,0),(0,0,0)]
+        self.gyro_res = [(0,0,0),(0,0,0)]
 
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
@@ -91,7 +92,7 @@ class DynaRoach(object):
         if typeID == cmd.TEST_ACCEL:
             self.acc_res = unpack('<3h', data)
         elif typeID == cmd.TEST_GYRO:
-            print unpack('<3h', data)
+            self.gyro_res = unpack('<3h', data)
         elif typeID == cmd.TEST_DFLASH:
             print ''.join(data)
         elif typeID == cmd.TEST_BATT:
@@ -230,9 +231,10 @@ class DynaRoach(object):
             time.sleep(2)
             self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
             time.sleep(.3)
-            assert (self.gyr_res <= GYRO_MAX[i]),"Test failed, accelerometer reading too high."
-            assert (self.gyr_res >= GYRO_MIN[i]), "Test failed, accelerometer reading too low."
-
+            #assert (self.gyro_res <= GYRO_MAX[i]),"Test failed, x value is invalid"
+            #assert (self.gyro_res >= GYRO_MIN[i]), "Test failed, y value is invalid"
+            #assert (self.gyro_res <= GYRO_MAX
+			assert (gyro_res is not None), "Check the radio. No packet received"
 
     def test_accel(self):
         '''
@@ -248,7 +250,7 @@ class DynaRoach(object):
             time.sleep(.3)
             assert (self.acc_res <= ACCEL_MAX[i]),"Test failed, accelerometer reading too high."
             assert (self.acc_res >= ACCEL_MIN[i]), "Test failed, accelerometer reading too low."
-
+			assert (acc_res is not None), "Check the radio. No packet received"
         print("Accelerometer working.")
 
     def test_dflash(self):
