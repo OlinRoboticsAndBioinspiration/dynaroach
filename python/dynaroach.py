@@ -43,8 +43,8 @@ VBATT_VOLTS_PER_CNT = 3.3/512
 ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
 ACCEL_MAX = [(-180,0,130),(10,-185,140)]
 
-GYRO_MAX = [(
-GYRO_MIN =
+#GYRO_MAX = [(
+#GYRO_MIN =
 
 
 
@@ -137,17 +137,6 @@ class DynaRoach(object):
             typeID = pld.type
             data = pld.data
             assert (data ==data_out), "Radio test failed. Incorrect data"
-            packet = self.last_packet
-
-            assert (packet is not None), "Radio test failed. No packet received."
-
-            pld = Payload(packet.get('rf_data'))
-            data = pld.data
-
-            assert (data == data_out), "Radio test failed, incorrect data received."
-            print('\n')
-            print('\n')
-            time.sleep(1)
 
         print ("Radio working.")
 
@@ -224,7 +213,7 @@ class DynaRoach(object):
 
         print("Testing gyroscope...")
         for i in range(0,3):
-			gyro_res = None;
+            gyro_res = None
             print("Put the board into the slit position x=1, y=2, z=3"+ str(i+1))
             time.sleep(2)
             self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
@@ -232,7 +221,7 @@ class DynaRoach(object):
             #assert (self.gyro_res <= GYRO_MAX[i]),"Test failed, x value is invalid"
             #assert (self.gyro_res >= GYRO_MIN[i]), "Test failed, y value is invalid"
             #assert (self.gyro_res <= GYRO_MAX
-			assert (gyro_res is not None), "Check the radio. No packet received"
+            assert (gyro_res is not None), "Check the radio. No packet received"
 
     def test_accel(self):
         '''
@@ -241,14 +230,21 @@ class DynaRoach(object):
         '''
 
         print("Testing accelerometer...")
+
+        coords = ('x','y','z')
         for i in range(0,2):
+            self.acc_res = None
             print("Place the board in position "+ str(i+1))
             time.sleep(2)
             self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ACCEL, [])
             time.sleep(.3)
-            assert (self.acc_res <= ACCEL_MAX[i]),"Test failed, accelerometer reading too high."
-            assert (self.acc_res >= ACCEL_MIN[i]), "Test failed, accelerometer reading too low."
-			assert (acc_res is not None), "Check the radio. No packet received"
+            assert (self.acc_res is not None), "Check the radio. No packet received"
+            print (self.acc_res)
+
+            for j in range(0, len(self.acc_res)):
+                assert (self.acc_res[j] <= ACCEL_MAX[i][j]),"Test failed, accelerometer "+coords[j]+" reading too high."
+                assert (self.acc_res[j] >= ACCEL_MIN[i][j]), "Test failed, accelerometer "+coords[j]+" reading too low."
+
         print("Accelerometer working.")
 
     def test_dflash(self):
@@ -261,37 +257,37 @@ class DynaRoach(object):
         print("Testing data flash...")
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_DFLASH, [])
 
-    def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
-        '''
-        Description:
-           Turn on a motor.
-       Parameters:
-            motor_id    : The motor number to turn on
-            time        : The amount of time to turn the motor on for (in
-                             seconds)
-            duty_cycle  : The duty cycle of the PWM signal used to control the
-                             motor in percent (0 - 100) 
-            direction   : The direction to spin the motor. There are *three*
-                             options for this parameter. 0 - reverse, 1 - forward, 
-                             2 high impedance motor controller output = braking
-            return_emf  : Send the back emf readings over the radio channel.
-        '''
+    # def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
+    #     '''
+    #     Description:
+    #        Turn on a motor.
+    #    Parameters:
+    #         motor_id    : The motor number to turn on
+    #         time        : The amount of time to turn the motor on for (in
+    #                          seconds)
+    #         duty_cycle  : The duty cycle of the PWM signal used to control the
+    #                          motor in percent (0 - 100) 
+    #         direction   : The direction to spin the motor. There are *three*
+    #                          options for this parameter. 0 - reverse, 1 - forward, 
+    #                          2 high impedance motor controller output = braking
+    #         return_emf  : Send the back emf readings over the radio channel.
+    #     '''
     
-        if direction >= 2:
-            direction = 2
-        elif direction <= 0:
-            direction = 0
-        else:
-            direction = 1
+    #     if direction >= 2:
+    #         direction = 2
+    #     elif direction <= 0:
+    #         direction = 0
+    #     else:
+    #         direction = 1
     
-        if return_emf != 1:
-            return_emf = 0
+    #     if return_emf != 1:
+    #         return_emf = 0
     
-        data_out = chr(cmd.STATUS_UNUSED) + chr(cmd.TEST_MOTOR) + chr(motor_id) + \
-                    chr(time) + chr(duty_cycle) + chr(direction) + \
-                    chr(return_emf)
-        if(self.check_conn()):
-            self.radio.tx(dest_addr=self.dest_addr, data=data_out)
+    #     data_out = chr(cmd.STATUS_UNUSED) + chr(cmd.TEST_MOTOR) + chr(motor_id) + \
+    #                 chr(time) + chr(duty_cycle) + chr(direction) + \
+    #                 chr(return_emf)
+    #     if(self.check_conn()):
+    #         self.radio.tx(dest_addr=self.dest_addr, data=data_out)
 
 #    def test_sma(self, chan_id, time, duty_cycle):
 #        '''

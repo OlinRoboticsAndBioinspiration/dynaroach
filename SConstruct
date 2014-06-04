@@ -1,6 +1,6 @@
 import os
 
-xcCompiler = "/opt/microchip/xc16/v1.20/"
+xcCompiler = "/opt/microchip/xc16/v1.11/"
 imageProc = "../imageproc-lib"
 
 assemblerFlags = "-Wa,-g" #pulled from makefile
@@ -8,7 +8,7 @@ env = Environment(PIC = '33Fj128MC706A',
                   CC = 'xc16-gcc', 
                   AS = 'xc16-as',
                   PROGSUFFIX = '.elf', 
-                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD '+assemblerFlags,
+                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  -D__C2 '+assemblerFlags,
                   LINKFLAGS = "-omf=elf -mcpu=$PIC -Wl,--script=\"p33FJ128MC706A_Bootload.gld\",--heap=8192,--stack=16",
                   #include paths
                   CPPPATH=[xcCompiler+"/support/dsPIC33F/h/",
