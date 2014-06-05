@@ -49,6 +49,9 @@ GYRO_MIN = [-1400,-1284,1284]
 MOTOR_MAX = [110, 960]
 MOTOR_MIN = [70, 920]
 
+BATT_MAX = 800
+BATT_MIN = 770
+
 
 
 class DynaRoach(object):
@@ -106,8 +109,6 @@ class DynaRoach(object):
             self.dflash_res= ''.join(data)
         elif typeID == cmd.TEST_BATT:
             self.vbatt = unpack('2H', data)[0]
-            print self.vbatt
-            print('cake')
         elif typeID == cmd.TX_SAVED_DATA:
             datum = list(unpack('<L3f3h2HB4H', data))
             self.state_data.append(datum)
@@ -286,21 +287,21 @@ class DynaRoach(object):
 
     def test_motor(self):#duty_cycle should be a decimal
         data = ''.join(chr(0) for i in range(2))
-        cmd_stop = str(pack('h', 0))
-        cmd_stop += str(pack('h', 0))
+        channel = str(pack('h',1))
+        cmd_stop = str(pack('h', 0))+channel
         duty_cycle = .15
 
         print("Testing motor. Place the motor on a flat surface and hold it down.")
 
         for i in range(0,2):
 
-            cmd_data = 2*str(pack('h', int(duty_cycle*100*(i*2-1))))
+            cmd_data = str(pack('h', int(duty_cycle*100*(i*2-1))))+channel
 
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
             time.sleep(3)
             self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
             time.sleep(1)
-            cmd_stop = 2*str(pack('h', 0))
+            cmd_stop = str(pack('h', 0))
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
 
             assert(self.bemf <= MOTOR_MAX[i]), "Test failed, motor back EMF too high."
@@ -372,7 +373,7 @@ class DynaRoach(object):
         data = ''.join(chr(0) for i in range(4))
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_BATT, data)
         time.sleep(.3)
-        print(type(self.vbatt))
+        print((self.vbatt))
         #assert(self.vbatt > 10000),"Test failed, battery voltage is "+ str(((self.vbatt/6.6)*1023)+ " volts."
 
         #print("Test successful.")
