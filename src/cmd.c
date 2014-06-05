@@ -128,7 +128,12 @@ void cmdSetup(void)
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
     LED_2 = ~LED_2;
-    mcSetDutyCycle(frame[0], frame[1]);
+    intT duty_cycle;
+
+    duty_cycle.c[0]=frame[0];
+    duty_cycle.c[1]=frame[1];
+
+    mcSetDutyCycle(1,(float)duty_cycle.i);
 }
 
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame)

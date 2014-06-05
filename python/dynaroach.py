@@ -46,6 +46,9 @@ ACCEL_MAX = [(-180,0,130),(10,-185,140)]
 GYRO_MAX = [1284,1284,1284]
 GYRO_MIN = [-1400,-1284,1284]
 
+MOTOR_MAX = [110, 960]
+MOTOR_MIN = [70, 920]
+
 
 
 class DynaRoach(object):
@@ -78,7 +81,7 @@ class DynaRoach(object):
 
         self.acc_res = [(0,0,0),(0,0,0)]
         self.gyro_res = [(0,0,0),(0,0,0)]
-        self.emf_res = 0
+        self.bemf = 0
 
         self.dflash_res = ""
 
@@ -118,8 +121,7 @@ class DynaRoach(object):
             self.gyro_offsets = list(unpack('<fff', data))
             print(self.gyro_offsets)
         elif typeID == cmd.GET_BACK_EMF:
-            print (unpack('H',data)[0])
-
+            self.bemf=(unpack('H',data)[0])
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
@@ -282,18 +284,31 @@ class DynaRoach(object):
         
         print "Dflash is fine."
 
-    def test_motor(self,duty_cycle):
+    def test_motor(self):#duty_cycle should be a decimal
         data = ''.join(chr(0) for i in range(2))
+        cmd_stop = str(pack('h', 0))
+        cmd_stop += str(pack('h', 0))
+        duty_cycle = .15
 
-        cmd_data = str(pack('f', duty_cycle))
-        cmd_data += str(pack('f',duty_cycle))
-        print(cmd_data)
-        self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)#put this in an iterative loop?
-        self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
-        time.sleep(.5)
-        cmd_data = str(pack('f', 0))
-        cmd_data += str(pack('f', 0))
-        self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
+        print("Testing motor. Place the motor on a flat surface and hold it down.")
+
+        for i in range(0,2):
+
+            cmd_data = 2*str(pack('h', int(duty_cycle*100*(i*2-1))))
+
+            self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
+            time.sleep(3)
+            self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
+            time.sleep(1)
+            cmd_stop = 2*str(pack('h', 0))
+            self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
+
+            assert(self.bemf <= MOTOR_MAX[i]), "Test failed, motor back EMF too high."
+            assert(self.bemf >= MOTOR_MIN[i]),"Test failed, motor back EMF too low."
+
+        print("Test passed.")
+
+
 
 
     # def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):

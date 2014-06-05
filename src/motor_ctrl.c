@@ -21,18 +21,17 @@ void mcSetup(void)
 
 void mcSetDutyCycle(unsigned char channel, float duty_cycle)
 {
+    P1SECMPbits.SEVTCMP = 4999-160;//Seems to be far enough from edge of period to get clear backEMF.
     if (duty_cycle > 0) {
         //Forward case: set 1H to PWM, override 1L and set high
         P1OVDCONbits.POVD1L = 0;
         P1OVDCONbits.POVD1H = 1;
         P1OVDCONbits.POUT1L = 0;
-        SEVTCMP = 4999-160;
     } else {
         //Reverse case: set 1L to PWM, override 1H and set low (to enable high impedance during off times)
         P1OVDCONbits.POVD1L = 1;
         P1OVDCONbits.POVD1H = 0;
         P1OVDCONbits.POUT1H = 0;
-        SEVTCMP = 160;
         duty_cycle *= -1;
     }
 
