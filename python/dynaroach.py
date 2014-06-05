@@ -310,7 +310,6 @@ class DynaRoach(object):
 
 
 
-
     # def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
     #     '''
     #     Description:
