@@ -285,9 +285,9 @@ class DynaRoach(object):
         
         print "Dflash is fine."
 
-    def test_motor(self):#duty_cycle should be a decimal
+    def test_motor(self,channel_num):#duty_cycle should be a decimal
         data = ''.join(chr(0) for i in range(2))
-        channel = str(pack('h',1))
+        channel = str(pack('h',channel_num))
         cmd_stop = str(pack('h', 0))+channel
         duty_cycle = .15
 
@@ -374,9 +374,9 @@ class DynaRoach(object):
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_BATT, data)
         time.sleep(.3)
         print((self.vbatt))
-        #assert(self.vbatt > 10000),"Test failed, battery voltage is "+ str(((self.vbatt/6.6)*1023)+ " volts."
+        assert(self.vbatt >= BATT_MIN and self.vbatt <= BATT_MAX),"Test failed, battery voltage is "+ str(self.vbatt*VBATT_VOLTS_PER_CNT)+ " volts."
 
-        #print("Test successful.")
+        print("Test successful.")
 
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
