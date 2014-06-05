@@ -43,8 +43,8 @@ VBATT_VOLTS_PER_CNT = 3.3/512
 ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
 ACCEL_MAX = [(-180,0,130),(10,-185,140)]
 
-GYRO_MAX = [(-900, 100, 0),(-20,-800,200),(400, 100, -900)]
-GYRO_MIN = [(-1400 -600, -500),(-300,-1800,-150),(100, -100, -1900)]
+GYRO_MAX = [(1284, 100, 0),(-20,1284,200),(400, 100, -1284)]
+GYRO_MIN = [(-1284, -600, -500),(-300,-1284,-150),(100, -100, -1284)]
 
 
 
@@ -212,6 +212,7 @@ class DynaRoach(object):
         self.gyro_offsets = None
 
     def test_gyro(self):
+		#sensitivity scale of gyro is 14.375
         '''
         Description:
             Read the XYZ values from the gyroscope.
@@ -262,12 +263,16 @@ class DynaRoach(object):
             Read out a set of strings that have been written to and read from
             memory.
         '''
-
+        #self.dflash_res = None
         print("Testing data flash...")
+        #for i in range (0,4):
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_DFLASH, [])
-        print self.dflash_res 
-		time.sleep(.5)
-		
+        time.sleep(.3)
+        #print self.dflash_res
+        #print "You must be here to fix the cable."
+        assert(self.dflash_res == "You must be here to fix the cable."),"Test Failed."
+        
+        print "Dflash is fine."
 		
     def test_motor(self):
         data = ''.join(chr(0) for i in range(2))
