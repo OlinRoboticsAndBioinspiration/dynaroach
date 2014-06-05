@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x15'
+DEFAULT_DEST_ADDR = '\x00\x12'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -79,7 +79,10 @@ class DynaRoach(object):
         self.acc_res = [(0,0,0),(0,0,0)]
         self.gyro_res = [(0,0,0),(0,0,0)]
         self.emf_res = 0
+
         self.dflash_res = ""
+
+        self.vbatt = 0
 
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
@@ -99,7 +102,9 @@ class DynaRoach(object):
             #print ''.join(data)
             self.dflash_res= ''.join(data)
         elif typeID == cmd.TEST_BATT:
-            print unpack('2H', data)
+            self.vbatt = unpack('2H', data)[0]
+            print self.vbatt
+            print('cake')
         elif typeID == cmd.TX_SAVED_DATA:
             datum = list(unpack('<L3f3h2HB4H', data))
             self.state_data.append(datum)
@@ -276,14 +281,19 @@ class DynaRoach(object):
         assert(self.dflash_res == "You must be here to fix the cable."),"Test Failed."
         
         print "Dflash is fine."
-		
-    def test_motor(self):
+
+    def test_motor(self,duty_cycle):
         data = ''.join(chr(0) for i in range(2))
-        self.set_motor_config(.25,.5)#put this in an iterative loop?
-        print ("hi")
+
+        cmd_data = str(pack('f', duty_cycle))
+        cmd_data += str(pack('f',duty_cycle))
+        print(cmd_data)
+        self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)#put this in an iterative loop?
         self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
-        time.sleep(.3)
-        self.set_motor_config(0,0)
+        time.sleep(.5)
+        cmd_data = str(pack('f', 0))
+        cmd_data += str(pack('f', 0))
+        self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
 
 
     # def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
@@ -344,8 +354,14 @@ class DynaRoach(object):
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_HALL, [])
 
     def test_batt(self):
+        print("Testing battery.")
         data = ''.join(chr(0) for i in range(4))
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_BATT, data)
+        time.sleep(.3)
+        print(type(self.vbatt))
+        #assert(self.vbatt > 10000),"Test failed, battery voltage is "+ str(((self.vbatt/6.6)*1023)+ " volts."
+
+        #print("Test successful.")
 
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))

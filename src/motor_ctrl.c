@@ -26,11 +26,13 @@ void mcSetDutyCycle(unsigned char channel, float duty_cycle)
         P1OVDCONbits.POVD1L = 0;
         P1OVDCONbits.POVD1H = 1;
         P1OVDCONbits.POUT1L = 0;
+        SEVTCMP = 4999-160;
     } else {
-        //Reverse case: set 1L to PWM, override 1H and set  (to enable high impedance during off times)
+        //Reverse case: set 1L to PWM, override 1H and set low (to enable high impedance during off times)
         P1OVDCONbits.POVD1L = 1;
         P1OVDCONbits.POVD1H = 0;
         P1OVDCONbits.POUT1H = 0;
+        SEVTCMP = 160;
         duty_cycle *= -1;
     }
 
