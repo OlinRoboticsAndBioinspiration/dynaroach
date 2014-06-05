@@ -43,8 +43,8 @@ VBATT_VOLTS_PER_CNT = 3.3/512
 ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
 ACCEL_MAX = [(-180,0,130),(10,-185,140)]
 
-GYRO_MAX = [(1284, 100, 0),(-20,1284,200),(400, 100, -1284)]
-GYRO_MIN = [(-1284, -600, -500),(-300,-1284,-150),(100, -100, -1284)]
+GYRO_MAX = [1284,1284,1284]
+GYRO_MIN = [-1400,-1284,1284]
 
 
 
@@ -217,20 +217,23 @@ class DynaRoach(object):
         Description:
             Read the XYZ values from the gyroscope.
         '''
-        print("Prepare the test desk with 15 rpm...")
+        print("Prepare the test desk(Vigor RECISION BO28) with 15 rpm...")
         time. sleep(2)
-        print("Testing gyroscope...")
         
         for i in range(0,3):
 			self.gyro_res= None
 			print("Put the board into the slit position /n (x=1 y=2 z=3) /n...position"+ str(i+1))
-			time.sleep(2)
+			time.sleep(12)
+			print("Testing gyroscope...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
+			
 			time.sleep(0.3)
+			#print self.gyro_res
 			assert (self.gyro_res is not None), "No packet received. Check the Radio."
-			assert (self.gyro_res <= GYRO_MAX[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too high"
-			assert (self.gyro_res >= GYRO_MIN[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too low"
-        print("Gyroscope Working.")
+			assert (self.gyro_res[i] <= GYRO_MAX[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too high"
+			
+			assert (self.gyro_res[i] >= GYRO_MIN[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too low"
+        print("Gyroscope Working for all three coordinates.")
 
 
     def test_accel(self):
