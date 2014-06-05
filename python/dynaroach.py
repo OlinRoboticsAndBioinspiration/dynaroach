@@ -79,6 +79,7 @@ class DynaRoach(object):
         self.acc_res = [(0,0,0),(0,0,0)]
         self.gyro_res = [(0,0,0),(0,0,0)]
         self.emf_res = 0
+        self.dflash_res = ""
 
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
@@ -93,9 +94,10 @@ class DynaRoach(object):
         if typeID == cmd.TEST_ACCEL:
             self.acc_res = unpack('<3h', data)
         elif typeID == cmd.TEST_GYRO:
-            print unpack('<3h', data) #self.gyro_res = 
+            self.gyro_res= unpack('<3h', data)  
         elif typeID == cmd.TEST_DFLASH:
-            print ''.join(data)
+            #print ''.join(data)
+            self.dflash_res= ''.join(data)
         elif typeID == cmd.TEST_BATT:
             print unpack('2H', data)
         elif typeID == cmd.TX_SAVED_DATA:
@@ -214,15 +216,20 @@ class DynaRoach(object):
         Description:
             Read the XYZ values from the gyroscope.
         '''
+        print("Prepare the test desk with 15 rpm...")
+        time. sleep(2)
         print("Testing gyroscope...")
-        #for i in range(0,3):
-        #    print("Put the board into the slit position /n (x=1 y=2 z=3) /n...position"+ str(i+1))
-        #    time.sleep(2)
-        #    self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
-        #    time.sleep(0.3)
-            #assert (self.gyro_res <= GYRO_MAX[i]),"Test failed, position"+" "+str(i+1)+" "+"is too high"
-            #assert (self.gyro_res >= GYRO_MIN[i]),"Test failed, position"+" "+str(i+1)+" "+"is too low"
-        #print("Gyroscope Working.")
+        
+        for i in range(0,3):
+			self.gyro_res= None
+			print("Put the board into the slit position /n (x=1 y=2 z=3) /n...position"+ str(i+1))
+			time.sleep(2)
+			self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
+			time.sleep(0.3)
+			assert (self.gyro_res is not None), "No packet received. Check the Radio."
+			assert (self.gyro_res <= GYRO_MAX[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too high"
+			assert (self.gyro_res >= GYRO_MIN[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too low"
+        print("Gyroscope Working.")
 
 
     def test_accel(self):
@@ -258,7 +265,10 @@ class DynaRoach(object):
 
         print("Testing data flash...")
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_DFLASH, [])
-
+        print self.dflash_res 
+		time.sleep(.5)
+		
+		
     def test_motor(self):
         data = ''.join(chr(0) for i in range(2))
         self.set_motor_config(.25,.5)#put this in an iterative loop?
