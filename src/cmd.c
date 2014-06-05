@@ -483,16 +483,16 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
 {
     Payload pld;
 
-    unsigned char mem_data[256] = {};
+    unsigned char mem_data[39] = {};
     char *str1 = "You must be here to fix the cable.";  // 38+1
-    char *str2 = "Lord. You can imagine where it goes from here.";  //46+1
-    char *str3 = "He fixes the cable?"; //19+1
-    char *str4 = "Don't be fatuous, Jeffrey."; //26+1
+    //char *str2 = "Lord. You can imagine where it goes from here.";  //46+1
+    //char *str3 = "He fixes the cable?"; //19+1
+    //char *str4 = "Don't be fatuous, Jeffrey."; //26+1
 
     strcpy((char *)mem_data, str1);
-    strcpy((char *)mem_data + strlen(str1), str2);
-    strcpy((char *)mem_data + strlen(str1) + strlen(str2), str3);
-    strcpy((char *)mem_data + strlen(str1) + strlen(str2) + strlen(str3), str4);
+    //strcpy((char *)mem_data + strlen(str1), str2);
+    //strcpy((char *)mem_data + strlen(str1) + strlen(str2), str3);
+    //strcpy((char *)mem_data + strlen(str1) + strlen(str2) + strlen(str3), str4);
 
     dfmemWrite (mem_data, sizeof(mem_data), 0x0100, 0, 1);
 
@@ -500,6 +500,8 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
     dfmemRead(0x0100, 0, strlen(str1),  payGetData(pld));
     send(status, strlen(str1), payGetData(pld), CMD_TEST_DFLASH);
     payDelete(pld);
+
+/*
 
     delay_ms(100);
     pld = payCreateEmpty(strlen(str2));
@@ -514,9 +516,14 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
     delay_ms(100);
     pld = payCreateEmpty(strlen(str4));
     dfmemRead(0x0100, strlen(str1) + strlen(str2) + strlen(str3), strlen(str4), payGetData(pld));
+    
+     
     send(status, strlen(str4), payGetData(pld), CMD_TEST_DFLASH);
-
     payDelete(pld);
+
+
+*/
+    
 
 }
 
