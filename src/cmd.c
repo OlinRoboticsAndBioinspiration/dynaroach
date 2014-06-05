@@ -127,13 +127,16 @@ void cmdSetup(void)
 
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
+	//Added on frame for purpose of test_sma (to take different channel other than 0
     LED_2 = ~LED_2;
     intT duty_cycle;
-
+	intT channel;
+	
     duty_cycle.c[0]=frame[0];
     duty_cycle.c[1]=frame[1];
-
-    mcSetDutyCycle(1,(float)duty_cycle.i);
+	channel.c[0]=frame[2];
+	channel.c[1]=frame[3];
+    mcSetDutyCycle(channel.i,(float)duty_cycle.i);
 }
 
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame)
@@ -144,7 +147,7 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
   rising_duty.c[1] = frame[1];//MSB
   falling_duty.c[0] = frame[2];
   falling_duty.c[1] = frame[3];
-
+  
   //mcSetDutyCycle takes inputs of -100 to 100
   MotorConfig.rising_edge_duty_cycle = ((float)rising_duty.i/INT_MAX)*100;
   MotorConfig.falling_edge_duty_cycle = ((float)falling_duty.i/INT_MAX)*100;
