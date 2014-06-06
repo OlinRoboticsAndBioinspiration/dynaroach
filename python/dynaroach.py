@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -282,9 +282,10 @@ class DynaRoach(object):
         #print self.dflash_res
         #print "You must be here to fix the cable."
         assert(self.dflash_res == "You must be here to fix the cable."),"Test Failed."
-        
-        print "Dflash is fine."
-
+        print "Dflash is fine."	
+		
+	
+		
     def test_motor(self,channel_num):#duty_cycle should be a decimal
         data = ''.join(chr(0) for i in range(2))
         channel = str(pack('h',channel_num))
@@ -377,7 +378,12 @@ class DynaRoach(object):
         assert(self.vbatt >= BATT_MIN and self.vbatt <= BATT_MAX),"Test failed, battery voltage is "+ str(self.vbatt*VBATT_VOLTS_PER_CNT)+ " volts."
 
         print("Test successful.")
-
+        
+    def test_sma(self):
+		print "Testing sma"
+		self.test_motor(2) #Channel 1 is set as motor and 2 is set as sma
+		
+		
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
 
