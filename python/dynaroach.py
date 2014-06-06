@@ -106,7 +106,7 @@ class DynaRoach(object):
             #print ''+''.join(data)
             self.dflash_string= self.dflash_string+''.join(data)
         elif typeID == cmd.TEST_BATT:
-            self.vbatt = unpack('2H', data)[0]
+            self.vbatt = unpack('H', data)[0]
         elif typeID == cmd.TX_SAVED_DATA:
             datum = list(unpack('<L3f3h2HB4H', data))
             self.state_data.append(datum)
