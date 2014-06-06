@@ -22,8 +22,8 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-#DEFAULT_DEST_ADDR = '\x00\x12'
-DEFAULT_DEST_ADDR = '\x00\x15'
+DEFAULT_DEST_ADDR = '\x00\x12'
+#DEFAULT_DEST_ADDR = '\x00\x15'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -374,16 +374,15 @@ class DynaRoach(object):
         
     def test_sma(self):
 
+        print("Testing SMA. Please scope the right SMA channel (closest to the power connector).")
         duty_cycle = 75
         cmd_stop = chr(0)
         cmd_duty_cycle = chr(duty_cycle)
-        print cmd_duty_cycle
         sides = ["right", "left"]
 
         for i in range (0,2):
-            print("Testing SMA. Please scope the "+sides[i]+ " SMA channel.")
+            print("Please scope the "+sides[i]+ " SMA channel.")
             cmd_side = chr(i)
-            print(chr(i))
             self.radio.send(cmd.STATUS_UNUSED, cmd.SET_SMA, cmd_side+cmd_duty_cycle)
             time.sleep(2.5)
             print("If the "+sides[i]+ " channel is showing a square wave, SMA is working.")
