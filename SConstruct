@@ -8,7 +8,7 @@ env = Environment(PIC = '33Fj128MC706A',
                   CC = 'xc16-gcc', 
                   AS = 'xc16-as',
                   PROGSUFFIX = '.elf', 
-                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  -D__C2 '+assemblerFlags,
+                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  -D__C5 '+assemblerFlags,
                   LINKFLAGS = "-omf=elf -mcpu=$PIC -Wl,--script=\"p33FJ128MC706A_Bootload.gld\",--heap=8192,--stack=16",
                   #include paths
                   CPPPATH=[xcCompiler+"/support/dsPIC33F/h/",

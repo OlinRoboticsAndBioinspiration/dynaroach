@@ -508,10 +508,7 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
     pld = payCreateEmpty(strlen(str1));
     dfmemRead(0x0100, 0, strlen(str1),  payGetData(pld));
     send(status, strlen(str1), payGetData(pld), CMD_TEST_DFLASH);
-    payDelete(pld);
-
-/*
-
+    //payDelete(pld);
     delay_ms(100);
     pld = payCreateEmpty(strlen(str2));
     dfmemRead(0x0100, strlen(str1), strlen(str2), payGetData(pld));
@@ -529,9 +526,6 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
      
     send(status, strlen(str4), payGetData(pld), CMD_TEST_DFLASH);
     payDelete(pld);
-
-
-*/
     
 
 }
