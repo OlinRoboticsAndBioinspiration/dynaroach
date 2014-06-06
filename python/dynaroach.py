@@ -43,8 +43,8 @@ VBATT_VOLTS_PER_CNT = 3.3/512
 ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
 ACCEL_MAX = [(-180,0,130),(10,-185,140)]
 
-GYRO_MAX = [1284,1284,1284]
-GYRO_MIN = [-1400,-1284,1284]
+GYRO_MAX= range(900,1284)
+GYRO_MIN = range(-1300,-900)
 
 MOTOR_MAX = [110, 960]
 MOTOR_MIN = [70, 920]
@@ -238,9 +238,8 @@ class DynaRoach(object):
 			time.sleep(0.3)
 			#print self.gyro_res
 			assert (self.gyro_res is not None), "No packet received. Check the Radio."
-			assert (self.gyro_res[i] <= GYRO_MAX[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too high"
-			
-			assert (self.gyro_res[i] >= GYRO_MIN[i]),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too low"
+			assert (self.gyro_res in GYRO_MAX),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too high"
+			assert (self.gyro_res in GYRO_MIN),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too low"
         print("Gyroscope Working for all three coordinates.")
 
 
@@ -278,11 +277,12 @@ class DynaRoach(object):
         print("Testing data flash...")
         #for i in range (0,4):
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_DFLASH, [])
-        time.sleep(.3)
-        #print self.dflash_res
+        time.sleep(3)
+        #time.sleep()
+        print self.dflash_res
         #print "You must be here to fix the cable."
-        assert(self.dflash_res == "You must be here to fix the cable."),"Test Failed."
-        print "Dflash is fine."	
+        #assert(self.dflash_res == "You must be here to fix the cable."),"Test Failed."
+        #print "Dflash is fine."	
 		
 	
 		
@@ -293,20 +293,19 @@ class DynaRoach(object):
         duty_cycle = .15
 
         print("Testing motor. Place the motor on a flat surface and hold it down.")
-
+		
         for i in range(0,2):
 
             cmd_data = str(pack('h', int(duty_cycle*100*(i*2-1))))+channel
-
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
             time.sleep(3)
             self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
             time.sleep(1)
             cmd_stop = str(pack('h', 0))
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
-
-            assert(self.bemf <= MOTOR_MAX[i]), "Test failed, motor back EMF too high."
-            assert(self.bemf >= MOTOR_MIN[i]),"Test failed, motor back EMF too low."
+            if channel_num ==1:
+				assert(self.bemf <= MOTOR_MAX[i]), "Test failed, motor back EMF too high."
+				assert(self.bemf >= MOTOR_MIN[i]),"Test failed, motor back EMF too low."
 
         print("Test passed.")
 
@@ -379,9 +378,10 @@ class DynaRoach(object):
 
         print("Test successful.")
         
-    def test_sma(self):
-		print "Testing sma"
-		self.test_motor(2) #Channel 1 is set as motor and 2 is set as sma
+    def test_sma(self, chennel_num):
+		
+        print("Test passed.")
+        self.test_motor(2) #Channel 1 is set as motor and 2 is set as sma
 		
 		
     def get_sample_count(self):
