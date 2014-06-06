@@ -166,6 +166,7 @@ static void cmdSetSma(unsigned char status, unsigned char length, unsigned char 
 {
     intT side;
     intT duty_cycle;
+    LED_1 = ~LED_1;
     
     side.c[0]=frame[0];
     side.c[1]=frame[1];
@@ -454,22 +455,6 @@ static void cmdTestBatt(unsigned char status, unsigned char length, unsigned cha
     AD1CON1bits.SAMP = 0;
     AD1CON1bits.DONE = 0;
     MD_LED_1 = ~MD_LED_1;
-
-    v_batt.sval = ADCBUF0;
-    frame[0] = v_batt.cval[0];
-    frame[1] = v_batt.cval[1];
-
-
-    AD1CHS0bits.CH0SA = 0b00001;      //Select AN0 for CH0 +ve input
-    AD1CON1bits.SAMP = 1;
-    while(!AD1CON1bits.DONE);
-    AD1CON1bits.SAMP = 0;
-    AD1CON1bits.DONE = 0;
-    v_batt.sval = ADCBUF0;
-    frame[2] = v_batt.cval[0];
-    frame[3] = v_batt.cval[1];
-
-    send(status, 4, frame, CMD_TEST_BATT);
 }
 
 static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char* frame){
