@@ -282,8 +282,6 @@ class DynaRoach(object):
         assert(self.dflash_res == "You must be here to fix the cable."),"Test Failed."
         print "Dflash is fine."	
 		
-	
-		
     def test_motor(self,channel_num):#duty_cycle should be a decimal
         data = ''.join(chr(0) for i in range(2))
         channel = str(pack('h',channel_num))
@@ -300,7 +298,6 @@ class DynaRoach(object):
             time.sleep(3)
             self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
             time.sleep(1)
-            cmd_stop = str(pack('h', 0))
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
 
             assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
@@ -373,14 +370,22 @@ class DynaRoach(object):
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_BATT, data)
         time.sleep(.3)
 
-        assert(self.vbatt >= BATT_MIN and self.vbatt <= BATT_MAX),"Test failed, battery voltage is "+ "%.2f"%(self.vbatt*VBATT_VOLTS_PER_CNT)+ " volts."
-
+        assert(self.vbatt >=BATT_BASE-BATT_RANGE and self.vbatt <= BATT_BASE+BATT_RANGE),"Test failed, battery voltage is "+ "%.2f"%(self.vbatt*VBATT_VOLTS_PER_CNT)+ " volts."
         print("Test successful.")
         
     def test_sma(self):
 		print "Testing sma"
 		self.test_motor(2) #Channel 1 is set as motor and 2 is set as sma
 		
+    def run_tests(self):
+        print("Please plug the board into a 5 volt supply.")
+        self.echo()
+        self.test_batt()
+        self.test_motor(1)
+        self.test_gyro()
+        self.test_accel()
+        self.test_sma()
+        
 		
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
