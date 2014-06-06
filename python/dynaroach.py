@@ -298,15 +298,10 @@ class DynaRoach(object):
             self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
             time.sleep(1)
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
-<<<<<<< HEAD
+
             if channel_num ==1:
 				assert(self.bemf <= MOTOR_MAX[i]), "Test failed, motor back EMF too high."
 				assert(self.bemf >= MOTOR_MIN[i]),"Test failed, motor back EMF too low."
-=======
-
-            assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
-            assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
->>>>>>> dcb2e80c505973ed31dfe487739317aadacb521c
 
         print("Test passed.")
 
