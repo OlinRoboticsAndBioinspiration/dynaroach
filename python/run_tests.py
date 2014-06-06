@@ -38,10 +38,10 @@
 #  Fernando L. Garcia Bermudez      2012-8-20    Initial release
 #  Claire Keum and Emily Tumang		2014-6-6	 Added Features
 
-import sys, traceback
+import traceback
 import dynaroach
 
-RADIO_DEV_NAME  = '/dev/ttyUSB1'# or 'COMx'
+RADIO_DEV_NAME  = '/dev/ttyUSB3'# or 'COMx'
 RADIO_BAUD_RATE = 230400
 RADIO_DEST_ADDR = '\x00\x15'
 
@@ -52,10 +52,10 @@ def main():
 
     print('\nI: Testing radio communication:')
     rb.echo()
-
+    
     print('\nI: Testing gyroscopes:\n')
-    rb.test_gyro
-
+    rb.test_gyro()
+    
     print('\nI: Testing accelerometers:\n')
     rb.test_accel
 
