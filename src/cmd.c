@@ -513,21 +513,18 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
     pld = payCreateEmpty(strlen(str2));
     dfmemRead(0x0100, strlen(str1), strlen(str2), payGetData(pld));
     send(status, strlen(str2), payGetData(pld), CMD_TEST_DFLASH);
-
+	payDelete(pld);
     delay_ms(100);
     pld = payCreateEmpty(strlen(str3));
     dfmemRead(0x0100, strlen(str1) + strlen(str2), strlen(str3), payGetData(pld));
     send(status, strlen(str3), payGetData(pld), CMD_TEST_DFLASH);
-
+	payDelete(pld);
     delay_ms(100);
     pld = payCreateEmpty(strlen(str4));
     dfmemRead(0x0100, strlen(str1) + strlen(str2) + strlen(str3), strlen(str4), payGetData(pld));
-    
-     
     send(status, strlen(str4), payGetData(pld), CMD_TEST_DFLASH);
     payDelete(pld);
-    
-
+   
 }
 
 static int do_sweep = 0;
