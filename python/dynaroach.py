@@ -375,14 +375,15 @@ class DynaRoach(object):
     def test_sma(self):
 
         duty_cycle = 75
-        cmd_stop = str(pack('h',0))
-        cmd_duty_cycle = str(pack('h',duty_cycle))
+        cmd_stop = chr(0)
+        cmd_duty_cycle = chr(duty_cycle)
+        print cmd_duty_cycle
         sides = ["right", "left"]
 
         for i in range (0,2):
             print("Testing SMA. Please scope the "+sides[i]+ " SMA channel.")
-            cmd_side = str(pack('h',i))
-            print cmd_side
+            cmd_side = chr(i)
+            print(chr(i))
             self.radio.send(cmd.STATUS_UNUSED, cmd.SET_SMA, cmd_side+cmd_duty_cycle)
             time.sleep(2.5)
             print("If the "+sides[i]+ " channel is showing a square wave, SMA is working.")
