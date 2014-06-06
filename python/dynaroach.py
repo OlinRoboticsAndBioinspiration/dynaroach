@@ -22,7 +22,8 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
+#DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
