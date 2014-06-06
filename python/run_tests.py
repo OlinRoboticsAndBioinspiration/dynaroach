@@ -39,42 +39,46 @@
 #
 
 import sys, traceback
-import test_suite
+import dynaroach
 
-
-RADIO_DEV_NAME  = '/dev/ttyUSB0'# or 'COMx'
+RADIO_DEV_NAME  = '/dev/ttyUSB1'# or 'COMx'
 RADIO_BAUD_RATE = 230400
-RADIO_DEST_ADDR = '\x00\x12'
+RADIO_DEST_ADDR = '\x00\x15'
 
 def main():
-    ts = test_suite.TestSuite(RADIO_DEV_NAME,            \
+    rb = dynaroach.DynaRoach(RADIO_DEV_NAME,            \
                               baud_rate=RADIO_BAUD_RATE, \
                               dest_addr=RADIO_DEST_ADDR  )
 
     print('\nI: Testing radio communication:')
-    ts.test_radio()
+    rb.echo()
 
     print('\nI: Testing gyroscopes:\n')
-    ts.test_gyro(5)
+    rb.test_gyro
 
     print('\nI: Testing accelerometers:\n')
-    ts.test_accel(5)
+    rb.test_accel
 
     print('\nI: Testing flash memory:\n')
-    ts.test_dflash()
+    rb.test_dflash
+    
+    print('\nI: Testing battery:\n')
+    rb.test_batt
 
-    # TODO (fgb) : Need a crawlerproc to test actuators
-    #ts.test_motor()
-    #ts.test_sma()
+    print('\nI: Testing motor:\n')
+    rb.test_motor
 
-    ts.__del__()
+    print('\nI: Testing sma:\n')
+    rb.test_sma
+    
+    rb.__del__()
 
 ### Exception handling
 
 if __name__ == '__main__':
     try:
         main()
-        sys.exit(0)
+        sys.exit('passed all the tests')
     except SystemExit as e:
         print('\nI: SystemExit: ' + str(e))
     except KeyboardInterrupt:
