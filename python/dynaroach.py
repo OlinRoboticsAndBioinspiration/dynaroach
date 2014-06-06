@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x15'
+DEFAULT_DEST_ADDR = '\x00\x12'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -40,19 +40,17 @@ G                   = 9.81
 BEMF_VOLTS_PER_CNT  = 3.3/512
 VBATT_VOLTS_PER_CNT = 3.3/512
 
-ACCEL_MIN = [(-190,-10,120),(0,-195,125)]
-ACCEL_MAX = [(-180,0,130),(10,-185,140)]
+ACCEL_BASE = [(-185, -5, 125),(5,-190,130)]
+ACCEL_RANGE = 5
 
 GYRO_MAX= range(900,1284)
 GYRO_MIN = range(-1300,-900)
 
-MOTOR_MAX = [110, 960]
-MOTOR_MIN = [70, 920]
+MOTOR_BASE = [90,940]
+MOTOR_RANGE = 20
 
-BATT_MAX = 800
-BATT_MIN = 770
-
-
+BATT_BASE = 785
+BATT_RANGE = 15
 
 class DynaRoach(object):
     '''Class representing the dynaRoACH robot'''
@@ -238,8 +236,8 @@ class DynaRoach(object):
 			time.sleep(0.3)
 			#print self.gyro_res
 			assert (self.gyro_res is not None), "No packet received. Check the Radio."
-			assert (self.gyro_res in GYRO_MAX),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too high"
-			assert (self.gyro_res in GYRO_MIN),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"is too low"
+			assert (self.gyro_res in GYRO_MAX),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"not valid"
+			assert (self.gyro_res in GYRO_MIN),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"not valid"
         print("Gyroscope Working for all three coordinates.")
 
 
@@ -262,8 +260,8 @@ class DynaRoach(object):
             print (self.acc_res)
 
             for j in range(0, len(self.acc_res)):
-                assert (self.acc_res[j] <= ACCEL_MAX[i][j]),"Test failed, accelerometer "+coords[j]+" reading too high."
-                assert (self.acc_res[j] >= ACCEL_MIN[i][j]), "Test failed, accelerometer "+coords[j]+" reading too low."
+                assert (self.acc_res[j] <= ACCEL_BASE[i][j]-ACCEL_RANGE),"Test failed, accelerometer "+coords[j]+" reading too high."
+                assert (self.acc_res[j] >= ACCEL_BASE[i][j]+ACCEL_RANGE), "Test failed, accelerometer "+coords[j]+" reading too low."
 
         print("Accelerometer working.")
 
@@ -303,9 +301,15 @@ class DynaRoach(object):
             time.sleep(1)
             cmd_stop = str(pack('h', 0))
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
+<<<<<<< HEAD
             if channel_num ==1:
 				assert(self.bemf <= MOTOR_MAX[i]), "Test failed, motor back EMF too high."
 				assert(self.bemf >= MOTOR_MIN[i]),"Test failed, motor back EMF too low."
+=======
+
+            assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
+            assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
+>>>>>>> dcb2e80c505973ed31dfe487739317aadacb521c
 
         print("Test passed.")
 
@@ -373,8 +377,8 @@ class DynaRoach(object):
         data = ''.join(chr(0) for i in range(4))
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_BATT, data)
         time.sleep(.3)
-        print((self.vbatt))
-        assert(self.vbatt >= BATT_MIN and self.vbatt <= BATT_MAX),"Test failed, battery voltage is "+ str(self.vbatt*VBATT_VOLTS_PER_CNT)+ " volts."
+
+        assert(self.vbatt >= BATT_MIN and self.vbatt <= BATT_MAX),"Test failed, battery voltage is "+ "%.2f"%(self.vbatt*VBATT_VOLTS_PER_CNT)+ " volts."
 
         print("Test successful.")
         
