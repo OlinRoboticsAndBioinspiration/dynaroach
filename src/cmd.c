@@ -164,18 +164,29 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
 
 static void cmdSetSma(unsigned char status, unsigned char length, unsigned char *frame)
 {
-    if(frame[0] == SMA_RIGHT)
-    {
+    intT side;
+    intT duty_cycle;
+    
+    side.c[0]=frame[0];
+    side.c[1]=frame[1];
+
+    duty_cycle.c[0]=frame[2];
+    duty_cycle.c[1]=frame[3];
+
+    if(side.i == SMA_RIGHT)
+    {   
+        LED_2 = ~LED_2;
         P1OVDCONbits.POVD3L = 1;
         P1OVDCONbits.POVD3H = 0;
         P1OVDCONbits.POUT3H = 0;
-    }else if (frame[0] == SMA_LEFT)
+    }else if (side.i == SMA_LEFT)
     {
+        LED_2 = ~LED_2;
         P1OVDCONbits.POVD3H = 1;
         P1OVDCONbits.POVD3L = 0;
         P1OVDCONbits.POUT3L = 0;
     }
-    mcSetDutyCycle(3, frame[1]); //Hardcoded "3" needs to go
+    mcSetDutyCycle(3, (float)duty_cycle.i); //Hardcoded "3" needs to go
 }
 
 

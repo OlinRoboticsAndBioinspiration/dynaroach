@@ -24,7 +24,7 @@
 
 #define MD_LED_1                _LATB8
 #define MD_LED_2                _LATB11
-#define SMA_1                   1
+#define SMA_1        			1
 #define SMA_2                   2
 
 

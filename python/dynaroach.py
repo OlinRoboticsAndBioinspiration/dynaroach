@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x15'
+DEFAULT_DEST_ADDR = '\x00\x12'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -280,7 +280,7 @@ class DynaRoach(object):
         assert(self.dflash_string == "You must be here to fix the cable.Lord. You can imagine where it goes from here.He fixes the cable?Don't be fatuous, Jeffrey."),"Test Failed."
         print "Dflash is fine."	
 		
-    def test_motor(self,channel_num):#duty_cycle should be a decimal
+    def test_motor(self,channel_num=1):#duty_cycle should be a decimal
         data = ''.join(chr(0) for i in range(2))
         channel = str(pack('h',channel_num))
         cmd_stop = str(pack('h', 0))+channel
@@ -297,9 +297,9 @@ class DynaRoach(object):
             time.sleep(1)
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
 
-            if channel_num ==1:
-				assert(self.bemf <= MOTOR_BASE[i][j]-MOTOR_RANGE), "Test failed, motor back EMF too high."
-				assert(self.bemf >= MOTOR_BASE[i][j]+MOTOR_RANGE),"Test failed, motor back EMF too low."
+            if channel_num == 1:
+				assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
+				assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
 
         print("Test passed.")
 
@@ -371,21 +371,23 @@ class DynaRoach(object):
         assert(self.vbatt >=BATT_BASE-BATT_RANGE and self.vbatt <= BATT_BASE+BATT_RANGE),"Test failed, battery voltage is "+ "%.2f"%(self.vbatt*VBATT_VOLTS_PER_CNT)+ " volts."
         print("Test successful.")
         
-    def test_sma(self, chennel_num):
-		
-        print("Test passed.")
-        self.test_motor(2) #Channel 1 is set as motor and 2 is set as sma
-		
-    def run_tests(self):
-        print("Please plug the board into a 5 volt supply.")
-        self.echo()
-        self.test_batt()
-        self.test_motor(1)
-        self.test_gyro()
-        self.test_accel()
-        self.test_sma()
-        
-		
+    def test_sma(self):
+
+        duty_cycle = 75
+        cmd_stop = str(pack('h',0))
+        cmd_duty_cycle = str(pack('h',duty_cycle))
+        sides = ["right", "left"]
+
+        for i in range (0,2):
+            print("Testing SMA. Please scope the "+sides[i]+ " SMA channel.")
+            cmd_side = str(pack('h',i))
+            print cmd_side
+            self.radio.send(cmd.STATUS_UNUSED, cmd.SET_SMA, cmd_side+cmd_duty_cycle)
+            time.sleep(2.5)
+            print("If the "+sides[i]+ " channel is showing a square wave, SMA is working.")
+            time.sleep(2.5)
+            self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SMA, cmd_side+cmd_stop)
+
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
 
