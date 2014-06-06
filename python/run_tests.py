@@ -53,12 +53,6 @@ def main():
     print('\nI: Testing radio communication:')
     rb.echo()
     
-    print('\nI: Testing gyroscopes:\n')
-    rb.test_gyro()
-    
-    print('\nI: Testing accelerometers:\n')
-    rb.test_accel
-
     print('\nI: Testing flash memory:\n')
     rb.test_dflash
     
@@ -70,6 +64,18 @@ def main():
 
     print('\nI: Testing sma:\n')
     rb.test_sma
+    
+    print('\nI: Now we are going to test Accelerometer and Gyroscope:\n')
+    
+    print('To start with accelerometers, locate the board on the test desk with 45 degrees angle')
+    time.sleep(3)
+    print('\nI: Testing accelerometers:\n')
+    rb.test_accel
+    
+    print('To start with gyroscope, prepare a motor test desk that rotates with 15 rpm.')
+    time.sleep(3)
+    print('\nI: Testing gyroscope:\n')
+    rb.test_gyro
     
     rb.__del__()
 
