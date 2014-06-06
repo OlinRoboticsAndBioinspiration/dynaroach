@@ -84,8 +84,7 @@ class DynaRoach(object):
         self.gyro_res = [(0,0,0),(0,0,0)]
         self.bemf = 0
 
-        self.dflash_res = ""
-
+        self.dflash_string = ""
         self.vbatt = 0
 
     def add_receive_callback(self, callback):
@@ -103,8 +102,8 @@ class DynaRoach(object):
         elif typeID == cmd.TEST_GYRO:
             self.gyro_res= unpack('<3h', data)  
         elif typeID == cmd.TEST_DFLASH:
-            #print ''.join(data)
-            self.dflash_res= ''.join(data)
+            #print ''+''.join(data)
+            self.dflash_string= self.dflash_string+''.join(data)
         elif typeID == cmd.TEST_BATT:
             self.vbatt = unpack('2H', data)[0]
         elif typeID == cmd.TX_SAVED_DATA:
@@ -271,16 +270,15 @@ class DynaRoach(object):
             Read out a set of strings that have been written to and read from
             memory.
         '''
-        #self.dflash_res = None
+
         print("Testing data flash...")
         #for i in range (0,4):
+        self.dflash_string = ""
         self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_DFLASH, [])
-        time.sleep(3)
-        #time.sleep()
-        print self.dflash_res
-        #print "You must be here to fix the cable."
-        #assert(self.dflash_res == "You must be here to fix the cable."),"Test Failed."
-        #print "Dflash is fine."	
+        time.sleep(1)
+        #print self.dflash_string
+        assert(self.dflash_string == "You must be here to fix the cable.Lord. You can imagine where it goes from here.He fixes the cable?Don't be fatuous, Jeffrey."),"Test Failed."
+        print "Dflash is fine."	
 		
     def test_motor(self,channel_num):#duty_cycle should be a decimal
         data = ''.join(chr(0) for i in range(2))
