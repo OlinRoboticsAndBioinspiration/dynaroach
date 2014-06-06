@@ -36,7 +36,7 @@
 #
 # Revisions:
 #  Fernando L. Garcia Bermudez      2012-8-20    Initial release
-#
+#  Claire Keum and Emily Tumang		2014-6-6	 Added Features
 
 import sys, traceback
 import dynaroach
