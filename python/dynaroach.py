@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -301,15 +301,10 @@ class DynaRoach(object):
             time.sleep(1)
             cmd_stop = str(pack('h', 0))
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
-<<<<<<< HEAD
-            if channel_num ==1:
-				assert(self.bemf <= MOTOR_MAX[i]), "Test failed, motor back EMF too high."
-				assert(self.bemf >= MOTOR_MIN[i]),"Test failed, motor back EMF too low."
-=======
 
-            assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
-            assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
->>>>>>> dcb2e80c505973ed31dfe487739317aadacb521c
+            if channel_num ==1:
+				assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
+				assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
 
         print("Test passed.")
 
