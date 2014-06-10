@@ -35,15 +35,17 @@ GYRO_LSB2RAD = 0.00121414209
 PAGE_SIZE_8MBIT = 264
 PAGE_SIZE_16MBIT = 528
 
-DFMEM_PAGE_SIZES = {'\x00\x10' = PAGE_SIZE_8MBIT,
-                    '\x00\x11' = PAGE_SIZE_16MBIT,
-                    '\x00\x12' = PAGE_SIZE_8MBIT,
-                    '\x00\x13' = PAGE_SIZE_16MBIT,
-                    '\x00\x14' = PAGE_SIZE_8MBIT,
-                    '\x00\x15' = PAGE_SIZE_8MBIT
-                    '\x00\x16' = PAGE_SIZE_16MBIT
-                    '\x00\x17' = PAGE_SIZE_8MBIT
-                    '\x00\x18' = PAGE_SIZE_8MBIT}
+DFMEM_PAGE_SIZES = {
+                    '\x00\x10' : PAGE_SIZE_8MBIT,
+                    '\x00\x11' : PAGE_SIZE_16MBIT,
+                    '\x00\x12' : PAGE_SIZE_8MBIT,
+                    '\x00\x13' : PAGE_SIZE_16MBIT,
+                    '\x00\x14' : PAGE_SIZE_8MBIT,
+                    '\x00\x15' : PAGE_SIZE_8MBIT
+                    '\x00\x16' : PAGE_SIZE_16MBIT
+                    '\x00\x17' : PAGE_SIZE_8MBIT
+                    '\x00\x18' : PAGE_SIZE_8MBIT
+                }
 
 SAMPLE_BYTES = 35
 
@@ -52,6 +54,7 @@ XL_CNTS_PER_G       = 256.0
 G                   = 9.81
 BEMF_VOLTS_PER_CNT  = 3.3/512
 VBATT_VOLTS_PER_CNT = 3.3/512
+
 
 ACCEL_BASE = [(-185, -5, 125),(5,-190,130)]
 ACCEL_RANGE = 5
@@ -62,7 +65,7 @@ GYRO_MIN = range(-1300,-900)
 MOTOR_BASE = [90,940]
 MOTOR_RANGE = 20
 
-BATT_BASE = 785#about 5 v
+BATT_BASE = 785
 BATT_RANGE = 15
 
 class DynaRoach(object):
@@ -146,7 +149,7 @@ class DynaRoach(object):
             it echo them back. The results should be the
             receipt of three packets. The payloads of those three packets
             should print as consecutive integers 0-9, 10-19, and 20-29
-            respectively.
+            respectively. THe test then checks the return values.
         '''
         print("Testing radio.")
         for i in range(1, 4):
@@ -257,7 +260,8 @@ class DynaRoach(object):
     def test_accel(self):
         '''
         Description:
-            Read the XYZ values from the accelerometer.
+            Read the XYZ values from the accelerometer. When placed on a test slope of 45 degrees, it checks
+            the return values.
         '''
 
         print("Testing accelerometer...")
@@ -294,7 +298,11 @@ class DynaRoach(object):
         assert(self.dflash_string == "You must be here to fix the cable.Lord. You can imagine where it goes from here.He fixes the cable?Don't be fatuous, Jeffrey."),"Test Failed."
         print "Dflash is fine."	
 		
-    def test_motor(self,channel_num=1, duty_cycle = .15):
+    def test_motor(self,channel_num = 1, duty_cycle = .15):#decimal mostly to keep consistency with setMotorConfig
+    '''
+    Turn on a motor with a duty cycle of 15\% in order to check that the backEMF is within an acceptable range,
+    as well as a visual check to see that the motor is on.
+    '''
         data = ''.join(chr(0) for i in range(2))
         channel = chr(channel_num)
         cmd_stop = channel + chr(0)
@@ -387,7 +395,7 @@ class DynaRoach(object):
     def test_sma(self):
 
         print("Testing SMA. Please scope the right SMA channel (closest to the power connector).")
-        duty_cycle = 75
+        duty_cycle = 75 #75% on time
         cmd_stop = chr(0)
         cmd_duty_cycle = chr(duty_cycle)
         sides = ["right", "left"]
