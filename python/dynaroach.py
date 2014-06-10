@@ -22,13 +22,9 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-<<<<<<< HEAD
-#DEFAULT_DEST_ADDR = '\x00\x12'
-DEFAULT_DEST_ADDR = '\x00\x15'
-=======
 DEFAULT_DEST_ADDR = '\x00\x11'
 #DEFAULT_DEST_ADDR = '\x00\x15'
->>>>>>> 2fa14d9acb76bcc83a3bec599f531749c15a416f
+
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -46,9 +42,9 @@ DFMEM_PAGE_SIZES = {
                     '\x00\x12' : PAGE_SIZE_8MBIT,
                     '\x00\x13' : PAGE_SIZE_16MBIT,
                     '\x00\x14' : PAGE_SIZE_8MBIT,
-                    '\x00\x15' : PAGE_SIZE_8MBIT
-                    '\x00\x16' : PAGE_SIZE_16MBIT
-                    '\x00\x17' : PAGE_SIZE_8MBIT
+                    '\x00\x15' : PAGE_SIZE_8MBIT,
+                    '\x00\x16' : PAGE_SIZE_16MBIT,
+                    '\x00\x17' : PAGE_SIZE_8MBIT,
                     '\x00\x18' : PAGE_SIZE_8MBIT
                 }
 
@@ -59,6 +55,7 @@ XL_CNTS_PER_G       = 256.0
 G                   = 9.81
 BEMF_VOLTS_PER_CNT  = 3.3/512
 VBATT_VOLTS_PER_CNT = 3.3/512
+ACCEL_G_PER_BIT = 15.6/1000
 
 
 ACCEL_BASE = [(-185, -5, 125),(5,-190,130)]
@@ -304,10 +301,10 @@ class DynaRoach(object):
         print "Dflash is fine."	
 		
     def test_motor(self,channel_num = 1, duty_cycle = .15):#decimal mostly to keep consistency with setMotorConfig
-    '''
-    Turn on a motor with a duty cycle of 15\% in order to check that the backEMF is within an acceptable range,
-    as well as a visual check to see that the motor is on.
-    '''
+        '''
+        Turn on a motor with a duty cycle of 15\% in order to check that the backEMF is within an acceptable range,
+        as well as a visual check to see that the motor is on.
+        '''
         data = ''.join(chr(0) for i in range(2))
         channel = chr(channel_num)
         cmd_stop = channel + chr(0)
