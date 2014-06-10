@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x11'
+DEFAULT_DEST_ADDR = '\x00\x12'
 #DEFAULT_DEST_ADDR = '\x00\x15'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
@@ -313,7 +313,7 @@ class DynaRoach(object):
 		
         for i in range(0,2):
 
-            cmd_data = channel+chr(duty_cycle*100)
+            cmd_data = channel+chr(int(duty_cycle*100))
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
             time.sleep(3)
             self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
