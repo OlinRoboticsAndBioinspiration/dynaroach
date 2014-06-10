@@ -22,8 +22,13 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
+<<<<<<< HEAD
+#DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
+=======
 DEFAULT_DEST_ADDR = '\x00\x11'
 #DEFAULT_DEST_ADDR = '\x00\x15'
+>>>>>>> 2fa14d9acb76bcc83a3bec599f531749c15a416f
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -32,6 +37,9 @@ SMA_LEFT =  1
 GYRO_LSB2DEG = 0.0695652174  # 14.375 LSB/(deg/s)
 GYRO_LSB2RAD = 0.00121414209
 
+<<<<<<< HEAD
+DFMEM_PAGE_SIZE = 528 #8Mbit =  264 (dfmem.c)
+=======
 PAGE_SIZE_8MBIT = 264
 PAGE_SIZE_16MBIT = 528
 
@@ -47,6 +55,7 @@ DFMEM_PAGE_SIZES = {
                     '\x00\x18' : PAGE_SIZE_8MBIT
                 }
 
+>>>>>>> 2fa14d9acb76bcc83a3bec599f531749c15a416f
 SAMPLE_BYTES = 35
 
 TICKS_PER_MILLI     = 625.0
