@@ -129,7 +129,7 @@ static void cmdSetMotor(unsigned char status, unsigned char length, unsigned cha
 {   
 	//Added on frame for purpose of test_sma (to take different channel other than 0
     LED_2 = ~LED_2;
-    mcSetDutyCycle(frame[0],frame[1]);//this is a different format from setSMA!
+    mcSetDutyCycle(frame[0],frame[1]);//this is a different format from setSMA! frame[0]= channel frame[1]=duty cycle (python)
 }
 
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame)
@@ -156,6 +156,7 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
 }
 
 static void cmdSetSma(unsigned char status, unsigned char length, unsigned char *frame)
+//Similar to the motor but different that it sets the PWM to know which one (right or left) is one or off.
 {
 
     if(frame[0] == SMA_RIGHT)
@@ -171,7 +172,7 @@ static void cmdSetSma(unsigned char status, unsigned char length, unsigned char 
         P1OVDCONbits.POVD3L = 0;
         P1OVDCONbits.POUT3L = 0;
     }
-    mcSetDutyCycle(3, frame[1]); //Hardcoded "3" needs to go
+    mcSetDutyCycle(3, frame[1]); //Hardcoded "3" needs to go. Channel3 = SMA 
 }
 
 
@@ -469,6 +470,8 @@ static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned c
 *                 data - not used
 *****************************************************************************/
 static void cmdTestDflash(unsigned char status, unsigned char length, unsigned char* frame)
+//Sends each string in each packet
+//Give enough space for mem_data
 {
     Payload pld;
 
