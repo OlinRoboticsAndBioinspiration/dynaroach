@@ -22,8 +22,13 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
+<<<<<<< HEAD
 #DEFAULT_DEST_ADDR = '\x00\x12'
 DEFAULT_DEST_ADDR = '\x00\x15'
+=======
+DEFAULT_DEST_ADDR = '\x00\x11'
+#DEFAULT_DEST_ADDR = '\x00\x15'
+>>>>>>> 2fa14d9acb76bcc83a3bec599f531749c15a416f
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -32,7 +37,23 @@ SMA_LEFT =  1
 GYRO_LSB2DEG = 0.0695652174  # 14.375 LSB/(deg/s)
 GYRO_LSB2RAD = 0.00121414209
 
+<<<<<<< HEAD
 DFMEM_PAGE_SIZE = 528 #8Mbit =  264 (dfmem.c)
+=======
+PAGE_SIZE_8MBIT = 264
+PAGE_SIZE_16MBIT = 528
+
+DFMEM_PAGE_SIZES = {'\x00\x10' = PAGE_SIZE_8MBIT,
+                    '\x00\x11' = PAGE_SIZE_16MBIT,
+                    '\x00\x12' = PAGE_SIZE_8MBIT,
+                    '\x00\x13' = PAGE_SIZE_16MBIT,
+                    '\x00\x14' = PAGE_SIZE_8MBIT,
+                    '\x00\x15' = PAGE_SIZE_8MBIT
+                    '\x00\x16' = PAGE_SIZE_16MBIT
+                    '\x00\x17' = PAGE_SIZE_8MBIT
+                    '\x00\x18' = PAGE_SIZE_8MBIT}
+
+>>>>>>> 2fa14d9acb76bcc83a3bec599f531749c15a416f
 SAMPLE_BYTES = 35
 
 TICKS_PER_MILLI     = 625.0
@@ -50,7 +71,7 @@ GYRO_MIN = range(-1300,-900)
 MOTOR_BASE = [90,940]
 MOTOR_RANGE = 20
 
-BATT_BASE = 785
+BATT_BASE = 785#about 5 v
 BATT_RANGE = 15
 
 class DynaRoach(object):
@@ -87,6 +108,7 @@ class DynaRoach(object):
 
         self.dflash_string = ""
         self.vbatt = 0
+        self.dfmem_page_size = DFMEM_PAGE_SIZES[dest_addr]
 
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
@@ -281,17 +303,16 @@ class DynaRoach(object):
         assert(self.dflash_string == "You must be here to fix the cable.Lord. You can imagine where it goes from here.He fixes the cable?Don't be fatuous, Jeffrey."),"Test Failed."
         print "Dflash is fine."	
 		
-    def test_motor(self,channel_num=1):#duty_cycle should be a decimal
+    def test_motor(self,channel_num=1, duty_cycle = .15):
         data = ''.join(chr(0) for i in range(2))
-        channel = str(pack('h',channel_num))
-        cmd_stop = str(pack('h', 0))+channel
-        duty_cycle = .15
+        channel = chr(channel_num)
+        cmd_stop = channel + chr(0)
 
         print("Testing motor. Place the motor on a flat surface and hold it down.")
 		
         for i in range(0,2):
 
-            cmd_data = str(pack('h', int(duty_cycle*100*(i*2-1))))+channel
+            cmd_data = channel+chr(duty_cycle*100)
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
             time.sleep(3)
             self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)

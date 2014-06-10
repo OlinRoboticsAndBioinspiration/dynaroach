@@ -129,14 +129,7 @@ static void cmdSetMotor(unsigned char status, unsigned char length, unsigned cha
 {   
 	//Added on frame for purpose of test_sma (to take different channel other than 0
     LED_2 = ~LED_2;
-    intT duty_cycle;
-	intT channel;
-	
-    duty_cycle.c[0]=frame[0];
-    duty_cycle.c[1]=frame[1];
-	channel.c[0]=frame[2];
-	channel.c[1]=frame[3];
-    mcSetDutyCycle(channel.i,(float)duty_cycle.i);
+    mcSetDutyCycle(frame[0],frame[1]);//this is a different format from setSMA!
 }
 
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame)
@@ -164,15 +157,6 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
 
 static void cmdSetSma(unsigned char status, unsigned char length, unsigned char *frame)
 {
-    // intT side;
-    // intT duty_cycle;
-    // LED_1 = ~LED_1;
-    
-    // side.c[0]=frame[0];
-    // side.c[1]=frame[1];
-
-    // duty_cycle.c[0]=frame[2];
-    // duty_cycle.c[1]=frame[3];
 
     if(frame[0] == SMA_RIGHT)
     {   
