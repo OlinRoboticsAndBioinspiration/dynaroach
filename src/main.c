@@ -83,17 +83,19 @@ static void timer2Setup(void)
 
 int main ( void )
 {
-    //unsigned int addr;
-    //addr = GetAddr();
-
     SetupClock();
     SwitchClocks();
     SetupPorts();
+    
 
     spicSetupChannel1();
     spicSetupChannel2();
     ppoolInit();
-
+    
+    NETWORK_SRC_ADDR == __builtin_tblrdl(0x0010);
+    NETWORK_BASESTATION_PAN_ID == __builtin_tblrdl(0x0011);
+    NETWORK_BASESTATION_CHANNEL== __builtin_tblrdl(0x0012);
+    
     //BEGIN RADIO SETUP
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
     radioSetSrcAddr(NETWORK_SRC_ADDR);//addr);
