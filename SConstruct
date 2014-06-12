@@ -4,12 +4,21 @@ xcCompiler = "/opt/microchip/xc16/v1.11/"
 imageProc = "../imageproc-lib"
 
 assemblerFlags = "-Wa,-g" #pulled from makefile
+
+AddOption('--destaddr',
+          dest = "destaddr",
+          type = "string",
+          nargs = 1,
+          action = "store",
+          metavar = "BOARD_ADDRESS",
+          default = "1")#if not specified, bootloader will assume board 1
+
 env = Environment(PIC = '33Fj128MC706A',
                   CC = 'xc16-gcc', 
                   AS = 'xc16-as',
                   #ASFLAGS = '-p33FJ128MC706A',
                   PROGSUFFIX = '.elf', 
-                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  -D__C7 '+assemblerFlags,
+                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  '+assemblerFlags+' -D__'+GetOption("destaddr"),
                   LINKFLAGS = "-omf=elf -mcpu=$PIC -Wl,--script=\"p33FJ128MC706A_Bootload.gld\",--heap=8192,--stack=16",
                   #include paths
                   CPPPATH=[xcCompiler+"/support/dsPIC33F/h/",
@@ -44,17 +53,13 @@ imageProcLibFiles = [imageProc + "/" + n for n in [
     "init_default.c",
     "carray.c",
     "mac_packet.c",
-    "at86rf231_driver.c"]]
-
-bootloaderFiles = ["../bootloader/imageproc/target/source/" + n for n in [
-    "setadd.h",
-    "setadd.c"
-    ]]
+    "at86rf231_driver.c",
+    "wii.c"]]
     
 dynaroachFiles = Glob("src/*.c")
 staticLibs = [xcCompiler + "/lib/dsPIC33F/libp33FJ128MC706-elf.a", xcCompiler + "/lib/libq-elf.a"]
 
-env.Program('dynaroach', imageProcLibFiles + dynaroachFiles + bootloaderFiles + staticLibs)
+env.Program('dynaroach', imageProcLibFiles + dynaroachFiles + staticLibs)
 
 env.Hex('dynaroach')
 #env.List('dynaroach') #Current throws a bunch of errors
