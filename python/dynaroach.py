@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x17'
+DEFAULT_DEST_ADDR = '\x00\x12'
 #DEFAULT_DEST_ADDR = '\x00\x15'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
@@ -141,7 +141,7 @@ class DynaRoach(object):
             self.bemf=(unpack('H',data)[0])
         elif typeID == cmd.WII_DUMP:
             print("Wii data")
-            print(unpack('c'),data)
+            print(unpack('c',data))
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
