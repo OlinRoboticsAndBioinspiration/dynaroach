@@ -22,7 +22,7 @@ from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x17'
 #DEFAULT_DEST_ADDR = '\x00\x15'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
@@ -139,6 +139,9 @@ class DynaRoach(object):
             print(self.gyro_offsets)
         elif typeID == cmd.GET_BACK_EMF:
             self.bemf=(unpack('H',data)[0])
+        elif typeID == cmd.WII_DUMP:
+            print("Wii data")
+            print(unpack('c'),data)
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
@@ -410,6 +413,11 @@ class DynaRoach(object):
             print("If the "+sides[i]+ " channel is showing a square wave, SMA is working.")
             time.sleep(2.5)
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SMA, cmd_side+cmd_stop)
+
+    def wii_dump(self):
+
+        frame = ''.join(chr(0) for i in range(12))
+        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,frame)
 
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
