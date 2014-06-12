@@ -864,6 +864,7 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
     MD_LED_1 =1;
 	wiiDumpData(wii_data);
 	MD_LED_1 =0;
+	delay_ms(100);
     send(status, length, wii_data, CMD_WII_DUMP);
     for(i=0; i<3; i++){
 		MD_LED_1 = ~MD_LED_1;
