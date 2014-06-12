@@ -34,8 +34,9 @@
 #include "sclock.h"
 #include "ppool.h"
 #include "spi_controller.h"
+#include "../../bootloader/imageproc/target/source/setadd.h"
 #include <stdio.h>
-#include "../../bootloader/imageproc/target/source/bootloader.c"
+
 
 void initDma0(void)
 {
@@ -78,20 +79,12 @@ static void timer2Setup(void)
     ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
     _T2IE = 1;
 }
-int main ( void )
 
-{	/*int dongle_addr[2];
-	int board_addr[2];
-	int 
-	NETWORK_BASESTATION_PAN_ID = (Set_dongle_addr(dongle_addr));
-	NETWORK_SRC_ADDR = (Set_board_addr(board_addr));*/
-	
-	//int dongle_addr[2];
-	int board_addr[2];
-	//char radioddr = (Set_dongle_addr(dongle_addr));
-	int boardaddr = (Set_board_addr(board_addr));
-	
-    /* Initialization */
+int main ( void )
+{
+    unsigned int addr;
+    addr = GetAddr();
+
     SetupClock();
     SwitchClocks();
     SetupPorts();
@@ -102,7 +95,7 @@ int main ( void )
 
     //BEGIN RADIO SETUP
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
-    radioSetSrcAddr(boardaddr);
+    radioSetSrcAddr(addr);
     radioSetSrcPanID(NETWORK_BASESTATION_PAN_ID);
     radioSetChannel(NETWORK_BASESTATION_CHANNEL);
     //END RADIO SETUP
