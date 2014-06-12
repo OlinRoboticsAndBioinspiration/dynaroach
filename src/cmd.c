@@ -16,6 +16,7 @@
 #include "statetransition.h"
 #include "led.h"
 #include "adc.h"
+#include "wii.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -80,6 +81,7 @@ static void cmdSetDataStreaming(unsigned char status, unsigned char length, unsi
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 //Delete these once trackable management code is working
@@ -121,6 +123,7 @@ void cmdSetup(void)
     cmd_func[CMD_RESET] = &cmdReset;
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
+    cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -852,6 +855,13 @@ void motor_rising_edge() {
 void motor_falling_edge() {
      MD_LED_2 = 0;
      mcSetDutyCycle(1, MotorConfig.falling_edge_duty_cycle);
+}
+
+void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
+    unsigned char wii_data[12] = {};  
+	wiiDumpData(wii_data);
+    send(status, len(wii_data), wii_data, CMD_WII_DUMP);
+    delay_ms(100);
 }
 
 static int prevHall = 0;
