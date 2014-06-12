@@ -34,7 +34,8 @@
 #include "sclock.h"
 #include "ppool.h"
 #include "spi_controller.h"
-#include "../../bootloader/imageproc/target/source/setadd.h"
+#include "wii.h"
+//#include "../../bootloader/imageproc/target/source/setadd.h"
 #include <stdio.h>
 
 
@@ -82,8 +83,8 @@ static void timer2Setup(void)
 
 int main ( void )
 {
-    unsigned int addr;
-    addr = GetAddr();
+    //unsigned int addr;
+    //addr = GetAddr();
 
     SetupClock();
     SwitchClocks();
@@ -95,7 +96,7 @@ int main ( void )
 
     //BEGIN RADIO SETUP
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
-    radioSetSrcAddr(addr);
+    radioSetSrcAddr(NETWORK_SRC_ADDR);//addr);
     radioSetSrcPanID(NETWORK_BASESTATION_PAN_ID);
     radioSetChannel(NETWORK_BASESTATION_CHANNEL);
     //END RADIO SETUP
@@ -147,7 +148,7 @@ int main ( void )
     timer1Setup();
     timer2Setup();
     cmdSetup();
-
+	
     attSetup(1.0/TIMER1_FCY);
     char j;
     for(j=0; j<6; j++){
@@ -158,7 +159,9 @@ int main ( void )
         LED_3 = ~LED_3;
         delay_ms(100);
     }
-
+	
+	wiiSetupBasic();
+	
     LED_1 = 1;
     LED_2 = 1;
     LED_3 = 1;
