@@ -30,7 +30,7 @@
 #include "motor_ctrl.h"
 #include "attitude_q.h"
 #include "sma.h"
-#include "network.h"
+//#include "network.h"
 #include "sclock.h"
 #include "ppool.h"
 #include "spi_controller.h"
@@ -92,9 +92,9 @@ int main ( void )
     spicSetupChannel2();
     ppoolInit();
     
-    NETWORK_SRC_ADDR == __builtin_tblrdl(0x0010);
-    NETWORK_BASESTATION_PAN_ID == __builtin_tblrdl(0x0011);
-    NETWORK_BASESTATION_CHANNEL== __builtin_tblrdl(0x0012);
+    unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(0x0010);
+    unsigned int NETWORK_BASESTATION_PAN_ID = __builtin_tblrdl(0x0011);
+    unsigned int NETWORK_BASESTATION_CHANNEL= __builtin_tblrdl(0x0012);
     
     //BEGIN RADIO SETUP
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
