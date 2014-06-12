@@ -92,7 +92,7 @@ int main ( void )
     spicSetupChannel2();
     ppoolInit();
     
-    TBLPAG = 0x7F;
+    //TBLPAG = 0x7F;
     unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(0);
     unsigned int NETWORK_BASESTATION_PAN_ID = __builtin_tblrdl(2);
     unsigned int NETWORK_BASESTATION_CHANNEL= __builtin_tblrdl(4);
