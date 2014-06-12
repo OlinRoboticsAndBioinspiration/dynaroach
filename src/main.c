@@ -92,10 +92,10 @@ int main ( void )
     spicSetupChannel2();
     ppoolInit();
     
-    //TBLPAG = 0x7F;
-    unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(0);
-    unsigned int NETWORK_BASESTATION_PAN_ID = __builtin_tblrdl(2);
-    unsigned int NETWORK_BASESTATION_CHANNEL= __builtin_tblrdl(4);
+    TBLPAG = 0x7F;
+    unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(0x00);
+    unsigned int NETWORK_BASESTATION_PAN_ID = __builtin_tblrdl(0x02);
+    unsigned int NETWORK_BASESTATION_CHANNEL= __builtin_tblrdl(0x04);
     
     //BEGIN RADIO SETUP
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
