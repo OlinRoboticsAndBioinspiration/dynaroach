@@ -860,7 +860,7 @@ void motor_falling_edge() {
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
     unsigned char wii_data[12] = {};  
 	wiiDumpData(wii_data);
-    send(status, len(wii_data), wii_data, CMD_WII_DUMP);
+    send(status, length, wii_data, CMD_WII_DUMP);
     delay_ms(100);
 }
 
