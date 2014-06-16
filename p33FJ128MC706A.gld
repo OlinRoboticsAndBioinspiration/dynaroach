@@ -18,6 +18,7 @@ MEMORY
   ivt            : ORIGIN = 0x4,           LENGTH = 0xFC
   aivt           : ORIGIN = 0x104,         LENGTH = 0xFC
   program (xr)   : ORIGIN = 0x200,         LENGTH = 0x155FE
+
   FBS            : ORIGIN = 0xF80000,      LENGTH = 0x2
   FSS            : ORIGIN = 0xF80002,      LENGTH = 0x2
   FGS            : ORIGIN = 0xF80004,      LENGTH = 0x2
@@ -119,11 +120,6 @@ SECTIONS
   **           *(usercode);
   **         } >program
   */
-  usercode :
-  {
-        *(usercode);
-  } >program
-
 
   /*
   ** User-Defined Constants in Program Memory

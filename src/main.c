@@ -38,6 +38,8 @@
 //#include "../../bootloader/imageproc/target/source/setadd.h"
 #include <stdio.h>
 
+TBLPAG = 0x0;
+NETWORK_SRC_ADDR = __builtin_tblrdl(0x400);
 
 void initDma0(void)
 {
@@ -92,17 +94,27 @@ int main ( void )
     spicSetupChannel2();
     ppoolInit();
     
-    TBLPAG = 0x7F;
-    unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(0x00);
-    unsigned int NETWORK_BASESTATION_PAN_ID = __builtin_tblrdl(0x02);
-    unsigned int NETWORK_BASESTATION_CHANNEL= __builtin_tblrdl(0x04);
+    LED_1=~LED_1;
+    delay_ms(1000);
+    unsigned int NETWORK_BASESTATION_PAN_ID = 0000;
+    unsigned int NETWORK_BASESTATION_CHANNEL= 14;
+    
+    //TBLPAG = 0x7F;
+    //unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(0x00);
+    //unsigned int NETWORK_BASESTATION_PAN_ID = __builtin_tblrdl(0x02);
+    //unsigned int NETWORK_BASESTATION_CHANNEL= __builtin_tblrdl(0x04);
     
     //BEGIN RADIO SETUP
+    if (NETWORK_SRC_ADDR =0){
+        LED_3=~LED_3;
+    }
+    delay_ms(1000);
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
     radioSetSrcAddr(NETWORK_SRC_ADDR);//addr);
     radioSetSrcPanID(NETWORK_BASESTATION_PAN_ID);
     radioSetChannel(NETWORK_BASESTATION_CHANNEL);
     //END RADIO SETUP
+    LED_1=~LED_1;
 
     //BEGIN I2C SETUP
     unsigned int I2C1CONvalue, I2C1BRGvalue;
@@ -163,7 +175,7 @@ int main ( void )
         delay_ms(100);
     }
 	
-	wiiSetupBasic();
+	//wiiSetupBasic();
 	
     LED_1 = 1;
     LED_2 = 1;
