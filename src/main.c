@@ -30,16 +30,13 @@
 #include "motor_ctrl.h"
 #include "attitude_q.h"
 #include "sma.h"
-//#include "network.h"
 #include "sclock.h"
 #include "ppool.h"
 #include "spi_controller.h"
 #include "wii.h"
-//#include "../../bootloader/imageproc/target/source/setadd.h"
 #include <stdio.h>
 
-TBLPAG = 0x0;
-NETWORK_SRC_ADDR = __builtin_tblrdl(0x400);
+#define SRC_ADDR_LOC        0x400 //bootloader stores board address here- do not change!
 
 void initDma0(void)
 {
@@ -93,28 +90,19 @@ int main ( void )
     spicSetupChannel1();
     spicSetupChannel2();
     ppoolInit();
-    
-    LED_1=~LED_1;
-    delay_ms(1000);
-    unsigned int NETWORK_BASESTATION_PAN_ID = 0000;
-    unsigned int NETWORK_BASESTATION_CHANNEL= 14;
-    
-    //TBLPAG = 0x7F;
-    //unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(0x00);
-    //unsigned int NETWORK_BASESTATION_PAN_ID = __builtin_tblrdl(0x02);
-    //unsigned int NETWORK_BASESTATION_CHANNEL= __builtin_tblrdl(0x04);
-    
-    //BEGIN RADIO SETUP
-    if (NETWORK_SRC_ADDR =0){
-        LED_3=~LED_3;
-    }
-    delay_ms(1000);
+
+    TBLPAG = 0x0;
+    unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(SRC_ADDR_LOC);
+
+    LED_1=1;
+    LED_2=1;
+    LED_3=1;
+
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
-    radioSetSrcAddr(NETWORK_SRC_ADDR);//addr);
-    radioSetSrcPanID(NETWORK_BASESTATION_PAN_ID);
-    radioSetChannel(NETWORK_BASESTATION_CHANNEL);
+    radioSetSrcAddr(NETWORK_SRC_ADDR);//defined by bootloader
+    radioSetSrcPanID(NETWORK_BASESTATION_PAN_ID);//defined in cmd.h
+    radioSetChannel(NETWORK_BASESTATION_CHANNEL);//defined in cmd.h
     //END RADIO SETUP
-    LED_1=~LED_1;
 
     //BEGIN I2C SETUP
     unsigned int I2C1CONvalue, I2C1BRGvalue;
@@ -154,7 +142,6 @@ int main ( void )
     AD1CON1bits.ADON = 1;       //enable
     //END ADC SETUP
 
-
     mcSetup();
     gyroSetup();
     xlSetup();
@@ -175,7 +162,7 @@ int main ( void )
         delay_ms(100);
     }
 	
-	//wiiSetupBasic();
+    wiiSetupBasic();
 	
     LED_1 = 1;
     LED_2 = 1;
@@ -186,7 +173,6 @@ int main ( void )
     send(STATUS_UNUSED, 5, frame, '4');
     send(STATUS_UNUSED, 5, frame, '4');
     send(STATUS_UNUSED, 5, frame, '4');
-
     //radioDeleteQueues();
     while(1){
         cmdHandleRadioRxBuffer();

@@ -5,20 +5,20 @@ imageProc = "../imageproc-lib"
 
 assemblerFlags = "-Wa,-g" #pulled from makefile
 
-AddOption('--destaddr',
-          dest = "destaddr",
-          type = "string",
-          nargs = 1,
-          action = "store",
-          metavar = "BOARD_ADDRESS",
-          default = "1")#if not specified, bootloader will assume board 1
+# AddOption('--destaddr',
+#           dest = "destaddr",
+#           type = "string",
+#           nargs = 1,
+#           action = "store",
+#           metavar = "BOARD_ADDRESS",
+#           default = "1")#if not specified, bootloader will assume board 1
 
 env = Environment(PIC = '33Fj128MC706A',
                   CC = 'xc16-gcc', 
                   AS = 'xc16-as',
                   #ASFLAGS = '-p33FJ128MC706A',
                   PROGSUFFIX = '.elf', 
-                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  '+assemblerFlags+' -D__'+GetOption("destaddr"),
+                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  '+assemblerFlags,#+' -D__'+GetOption("destaddr"),
                   LINKFLAGS = "-omf=elf -mcpu=$PIC -Wl,--script=\"p33FJ128MC706A_Bootload.gld\",--heap=8192,--stack=16",
                   #include paths
                   CPPPATH=[xcCompiler+"/support/dsPIC33F/h/",

@@ -1,6 +1,10 @@
 #ifndef __CMD_H
 #define __CMD_H
 
+#define NETWORK_BASESTATION_ADDR  0x0100
+#define NETWORK_BASESTATION_PAN_ID  0x0000
+#define NETWORK_BASESTATION_CHANNEL 0x14
+
 typedef union {
     float fval;
     unsigned long lval;

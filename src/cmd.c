@@ -8,7 +8,7 @@
 #include "attitude_q.h"
 #include "payload.h"
 #include "consts.h"
-#include "network.h"
+//#include "network.h"
 #include "utils.h"
 #include "sclock.h"
 #include "gyro.h"
