@@ -51,7 +51,6 @@ void initDma0(void)
 }
 
 static void timer1Setup(void);
-void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 static void timer1Setup(void)
 {
@@ -83,9 +82,11 @@ int main ( void )
     LED_1 = 0;
     LED_2 = 0;
     LED_3 = 0;
+
     unsigned int network_src_addr = get_src_addr();
     unsigned int network_basestation_channel = get_channel();
     unsigned int network_basestation_pan_id = get_pan_id();
+    unsigned int network_basestation_addr = get_basestation_addr();
 
     if (network_src_addr == 0x0012){
         LED_1 = 1;
@@ -191,9 +192,9 @@ int main ( void )
 
     char frame[5];
 
-    send(STATUS_UNUSED, 5, frame, '4');
-    send(STATUS_UNUSED, 5, frame, '4');
-    send(STATUS_UNUSED, 5, frame, '4');
+    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
+    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
+    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
     //radioDeleteQueues();
     while(1){
         cmdHandleRadioRxBuffer();

@@ -16,8 +16,8 @@ typedef union {
 extern unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
 
 void cmdSetup(void);
-void cmdHandleRadioRxBuffer(void);
-void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
+unsigned int cmdHandleRadioRxBuffer(void);
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type,unsigned int dest);
 unsigned int get_src_addr(void);
 unsigned int get_basestation_addr(void);
 unsigned int get_pan_id(void);

@@ -27,6 +27,8 @@
 
 #define SRC_ADDR_LOC        0x400 
 
+volatile unsigned int last_addr;
+
 static union {
     struct {
         unsigned int page;
@@ -103,7 +105,7 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
-void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
 //Delete these once trackable management code is working
 
@@ -113,6 +115,7 @@ static unsigned char tms = 0;
 
 void cmdSetup(void)
 {
+    last_addr = get_basestation_addr();
     unsigned int i;
 
     for(i = 0; i < MAX_CMD_FUNC_SIZE; ++i)
@@ -200,7 +203,7 @@ static void cmdSetSma(unsigned char status, unsigned char length, unsigned char 
 }
 
 
-void cmdHandleRadioRxBuffer(void)
+unsigned int cmdHandleRadioRxBuffer(void)
 {
     MacPacket packet;
     Payload pld;
@@ -211,6 +214,7 @@ void cmdHandleRadioRxBuffer(void)
         pld = macGetPayload(packet);
         status = payGetStatus(pld);
         command = payGetType(pld);
+        last_addr = macGetSrcAddr(packet);
         if(command < MAX_CMD_FUNC_SIZE)//error checking 
         //within the boundary
         {
@@ -365,7 +369,7 @@ static void cmdRunTrial(unsigned char status, unsigned char length, unsigned cha
 
 static void cmdEcho(unsigned char status, unsigned char length, unsigned char *frame)
 {
-    send(status, length, frame, CMD_ECHO);
+    send(status, length, frame, CMD_ECHO, last_addr);
 }
 
 
@@ -386,7 +390,7 @@ static void cmdTestAccel(unsigned char status, unsigned char length, unsigned ch
     for (i=0; i < NUM_TEST_PACKETS; i++)
     {
         LED_1 = ~LED_1;
-        send(status, IMU_DATA_LEN, xlReadXYZ(), CMD_TEST_ACCEL);
+        send(status, IMU_DATA_LEN, xlReadXYZ(), CMD_TEST_ACCEL, last_addr);
         delay_ms(TEST_PACKET_INTERVAL_MS);
     }
 
@@ -408,7 +412,7 @@ static void cmdGetGyroCalibParam(unsigned char status, unsigned char length, uns
 {
     if(ROBOT)
     {
-        send(status, GYRO_CALIB_PARAM_LEN, gyroGetCalibParam(), CMD_GET_GYRO_CALIB_PARAM);
+        send(status, GYRO_CALIB_PARAM_LEN, gyroGetCalibParam(), CMD_GET_GYRO_CALIB_PARAM,last_addr);
     }
 }
 
@@ -427,7 +431,7 @@ static void cmdTestGyro(unsigned char status, unsigned char length, unsigned cha
     for(i=0; i<NUM_TEST_PACKETS; i++)
     {
         LED_1 = ~LED_1;
-        send(status, IMU_DATA_LEN, gyroReadXYZ(), CMD_TEST_GYRO);
+        send(status, IMU_DATA_LEN, gyroReadXYZ(), CMD_TEST_GYRO,last_addr);
         delay_ms(TEST_PACKET_INTERVAL_MS);
     }
     LED_1 = OFF;
@@ -483,7 +487,7 @@ static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned c
     frame[0] = bemf.cval[0];
     frame[1] = bemf.cval[1];
 
-    send(status, 2, frame, CMD_GET_BACK_EMF);
+    send(status, 2, frame, CMD_GET_BACK_EMF,last_addr);
 }
 
 /*****************************************************************************
@@ -517,22 +521,22 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
 
     pld = payCreateEmpty(strlen(str1));
     dfmemRead(0x0100, 0, strlen(str1),  payGetData(pld));
-    send(status, strlen(str1), payGetData(pld), CMD_TEST_DFLASH);
+    send(status, strlen(str1), payGetData(pld), CMD_TEST_DFLASH, last_addr);
     payDelete(pld);
     delay_ms(100);
     pld = payCreateEmpty(strlen(str2));
     dfmemRead(0x0100, strlen(str1), strlen(str2), payGetData(pld));
-    send(status, strlen(str2), payGetData(pld), CMD_TEST_DFLASH);
+    send(status, strlen(str2), payGetData(pld), CMD_TEST_DFLASH, last_addr);
 	payDelete(pld);
     delay_ms(100);
     pld = payCreateEmpty(strlen(str3));
     dfmemRead(0x0100, strlen(str1) + strlen(str2), strlen(str3), payGetData(pld));
-    send(status, strlen(str3), payGetData(pld), CMD_TEST_DFLASH);
+    send(status, strlen(str3), payGetData(pld), CMD_TEST_DFLASH, last_addr);
 	payDelete(pld);
     delay_ms(100);
     pld = payCreateEmpty(strlen(str4));
     dfmemRead(0x0100, strlen(str1) + strlen(str2) + strlen(str3), strlen(str4), payGetData(pld));
-    send(status, strlen(str4), payGetData(pld), CMD_TEST_DFLASH);
+    send(status, strlen(str4), payGetData(pld), CMD_TEST_DFLASH, last_addr);
     payDelete(pld);
    
 }
@@ -572,7 +576,7 @@ static void cmdGetSampleCount(unsigned char status, unsigned char length, unsign
     {
         frame[0] = sample_cnt.cval[0];
         frame[1] = sample_cnt.cval[1];
-        send(status, 2, frame, CMD_GET_SAMPLE_COUNT);
+        send(status, 2, frame, CMD_GET_SAMPLE_COUNT, last_addr);
     }
 }
 
@@ -597,7 +601,7 @@ static void cmdNop(unsigned char status, unsigned char length, unsigned char *fr
     Nop();//do nothing
 }
 
-void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type)
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest)
 {
     MacPacket packet;
     Payload pld;
@@ -612,7 +616,7 @@ void send(unsigned char status, unsigned char length, unsigned char *frame, unsi
     unsigned int network_basestation_addr = get_basestation_addr();
 
     macSetDestPan(packet, network_basestation_pan_id);
-    macSetDestAddr(packet, network_basestation_addr);
+    macSetDestAddr(packet, dest);
     pld = macGetPayload(packet);
     paySetData(pld, length, frame);
     paySetType(pld, type);
@@ -871,7 +875,7 @@ void sendCurrentSensors() {
     gyroDumpData(buffer+29);
 
     int status = 1;
-    send(status, kDataLength, buffer, CMD_SET_STREAMING);
+    send(status, kDataLength, buffer, CMD_SET_STREAMING, last_addr);
 }
 
 
@@ -897,7 +901,7 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
 	}
 	wiiDumpData(wii_data);
 	delay_ms(1000);
-    send(status, 12, wii_data, CMD_WII_DUMP);
+    send(status, 12, wii_data, CMD_WII_DUMP, last_addr);
 }
 
 static int prevHall = 0;
