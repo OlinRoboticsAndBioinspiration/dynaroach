@@ -36,8 +36,6 @@
 #include "wii.h"
 #include <stdio.h>
 
-#define SRC_ADDR_LOC        0x400 //bootloader stores board address here- do not change!
-
 void initDma0(void)
 {
     DMA0CONbits.AMODE = 0;                      //Configure DMA for register indirect with post increment
@@ -82,27 +80,48 @@ static void timer2Setup(void)
 
 int main ( void )
 {
+    LED_1 = 0;
+    LED_2 = 0;
+    LED_3 = 0;
+    unsigned int network_src_addr = get_src_addr();
+    unsigned int network_basestation_channel = get_channel();
+    unsigned int network_basestation_pan_id = get_pan_id();
+
+    if (network_src_addr == 0x0012){
+        LED_1 = 1;
+        delay_ms(1000);
+    }
+
+    if (network_basestation_pan_id == 0){
+        LED_2 = 1;
+        delay_ms(1000);
+    }
+
+    if (network_basestation_channel == 0x0014){
+        LED_3 = 1;
+        delay_ms(1000);
+    }
+
     SetupClock();
     SwitchClocks();
     SetupPorts();
-    
 
     spicSetupChannel1();
     spicSetupChannel2();
     ppoolInit();
-
-    TBLPAG = 0x0;
-    unsigned int NETWORK_SRC_ADDR = __builtin_tblrdl(SRC_ADDR_LOC);
 
     LED_1=1;
     LED_2=1;
     LED_3=1;
 
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
-    radioSetSrcAddr(NETWORK_SRC_ADDR);//defined by bootloader
-    radioSetSrcPanID(NETWORK_BASESTATION_PAN_ID);//defined in cmd.h
-    radioSetChannel(NETWORK_BASESTATION_CHANNEL);//defined in cmd.h
+    radioSetSrcAddr(network_src_addr);//defined by bootloader
+    radioSetSrcPanID(network_basestation_pan_id);
+    radioSetChannel(network_basestation_channel);
     //END RADIO SETUP
+
+    LED_2 = 0;
+    delay_ms(2000);
 
     //BEGIN I2C SETUP
     unsigned int I2C1CONvalue, I2C1BRGvalue;
@@ -149,10 +168,12 @@ int main ( void )
     sclockSetup();
     timer1Setup();
     timer2Setup();
+    LED_1 = 0;
+    delay_ms(1000);
     cmdSetup();
-	
     attSetup(1.0/TIMER1_FCY);
     char j;
+
     for(j=0; j<6; j++){
         LED_1 = ~LED_1;
         delay_ms(100);
@@ -162,7 +183,7 @@ int main ( void )
         delay_ms(100);
     }
 	
-    wiiSetupBasic();
+    //wiiSetupBasic();
 	
     LED_1 = 1;
     LED_2 = 1;

@@ -21,12 +21,11 @@
 #include <string.h>
 #include <stdint.h>
 
-
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
-
-
 //#define ROBOT 0
 #define ROBOT 1
+
+#define SRC_ADDR_LOC        0x400 
 
 static union {
     struct {
@@ -41,7 +40,6 @@ static struct {
   float falling_edge_duty_cycle;
 } MotorConfig;
 
-
 unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
 
 static SmaConfig sma_left;
@@ -49,9 +47,32 @@ static SmaConfig sma_right;
 static unsigned char saveData2Flash = 0;
 static unsigned char st_cnt;
 static uByte2 sample_cnt;
-
 static int streamMod = 0;
 static int is_data_streaming = 0;
+
+unsigned int get_src_addr(void){
+    TBLPAG = 0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC);
+    return addr;
+}
+
+unsigned int get_basestation_addr(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+2);
+    return addr;
+}
+
+unsigned int get_pan_id(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+4);
+    return addr;
+}
+
+unsigned int get_channel(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+6);
+    return addr;
+}
 
 void(*cmd_func[MAX_CMD_FUNC_SIZE])(unsigned char, unsigned char, unsigned char*);
 
@@ -229,8 +250,11 @@ static void cmdTxSavedData(unsigned char status, unsigned char length, unsigned 
                 {
                     continue;
                 }
-                macSetDestPan(packet, NETWORK_BASESTATION_PAN_ID);
-                macSetDestAddr(packet, NETWORK_BASESTATION_ADDR);
+                unsigned int network_basestation_pan_id = get_pan_id();
+                unsigned int network_basestation_addr = get_basestation_addr();
+
+                macSetDestPan(packet, network_basestation_pan_id);
+                macSetDestAddr(packet, network_basestation_addr);
                 pld = macGetPayload(packet);
                 dfmemRead(i, j, tx_data_size, payGetData(pld));
                 paySetType(pld, CMD_TX_SAVED_DATA);
@@ -583,8 +607,12 @@ void send(unsigned char status, unsigned char length, unsigned char *frame, unsi
     {
         return;
     }
-    macSetDestPan(packet, NETWORK_BASESTATION_PAN_ID);
-    macSetDestAddr(packet, NETWORK_BASESTATION_ADDR);
+
+    unsigned int network_basestation_pan_id = get_pan_id();
+    unsigned int network_basestation_addr = get_basestation_addr();
+
+    macSetDestPan(packet, network_basestation_pan_id);
+    macSetDestAddr(packet, network_basestation_addr);
     pld = macGetPayload(packet);
     paySetData(pld, length, frame);
     paySetType(pld, type);
@@ -858,7 +886,7 @@ void motor_falling_edge() {
 }
 
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
-    unsigned int wii_data[20] = {1};  
+    unsigned char wii_data[20] = {1};  
     int i;
     WiiBlob B;
     

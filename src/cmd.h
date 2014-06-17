@@ -1,10 +1,6 @@
 #ifndef __CMD_H
 #define __CMD_H
 
-#define NETWORK_BASESTATION_ADDR  0x0100
-#define NETWORK_BASESTATION_PAN_ID  0x0000
-#define NETWORK_BASESTATION_CHANNEL 0x14
-
 typedef union {
     float fval;
     unsigned long lval;
@@ -22,5 +18,9 @@ extern unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
 void cmdSetup(void);
 void cmdHandleRadioRxBuffer(void);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
+unsigned int get_src_addr(void);
+unsigned int get_basestation_addr(void);
+unsigned int get_pan_id(void);
+unsigned int get_channel(void);
 
 #endif // __CMD_H
