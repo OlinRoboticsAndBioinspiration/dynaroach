@@ -20,6 +20,8 @@ from lib import cmd
 from lib.basestation import BaseStation
 from lib.payload import Payload
 
+from matplotlib import pyplot as plt
+
 DEFAULT_BAUD_RATE = 230400
 
 DEFAULT_DEST_ADDR = '\x00\x12'
@@ -105,6 +107,7 @@ class DynaRoach(object):
         self.dflash_string = ""
         self.vbatt = 0
         self.dfmem_page_size = DFMEM_PAGE_SIZES[dest_addr]
+        self.wiidata=[]
 
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
@@ -141,7 +144,7 @@ class DynaRoach(object):
             self.bemf=(unpack('H',data)[0])
         elif typeID == cmd.WII_DUMP:
             print("Wii data")
-            print(unpack('12c',data))
+            self.wiidata = unpack('12B',data)
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
@@ -239,7 +242,7 @@ class DynaRoach(object):
         self.gyro_offsets = None
 
     def test_gyro(self):
-		#sensitivity scale of gyro is 14.375
+        #sensitivity scale of gyro is 14.375
         '''
         Description:
             Read the XYZ values from the gyroscope.
@@ -248,17 +251,17 @@ class DynaRoach(object):
         time. sleep(2)
         
         for i in range(0,3):
-			self.gyro_res= None
-			print("Put the board into the slit position /n (x=1 y=2 z=3) /n...position"+ str(i+1))
-			time.sleep(12)
-			print("Testing gyroscope...")
-			self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
-			
-			time.sleep(0.3)
-			#print self.gyro_res
-			assert (self.gyro_res is not None), "No packet received. Check the Radio."
-			assert (self.gyro_res in GYRO_MAX),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"not valid"
-			assert (self.gyro_res in GYRO_MIN),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"not valid"
+            self.gyro_res= None
+            print("Put the board into the slit position /n (x=1 y=2 z=3) /n...position"+ str(i+1))
+            time.sleep(12)
+            print("Testing gyroscope...")
+            self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
+
+            time.sleep(0.3)
+            #print self.gyro_res
+            assert (self.gyro_res is not None), "No packet received. Check the Radio."
+            assert (self.gyro_res in GYRO_MAX),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"not valid"
+            assert (self.gyro_res in GYRO_MIN),"Test failed, velocity on coordinate"+" "+str(i+1)+" "+"not valid"
         print("Gyroscope Working for all three coordinates.")
 
 
@@ -301,8 +304,8 @@ class DynaRoach(object):
         time.sleep(1)
         #print self.dflash_string
         assert(self.dflash_string == "You must be here to fix the cable.Lord. You can imagine where it goes from here.He fixes the cable?Don't be fatuous, Jeffrey."),"Test Failed."
-        print "Dflash is fine."	
-		
+        print "Dflash is fine." 
+
     def test_motor(self,channel_num = 1, duty_cycle = .15):#decimal mostly to keep consistency with setMotorConfig
         '''
         Turn on a motor with a duty cycle of 15\% in order to check that the backEMF is within an acceptable range,
@@ -313,7 +316,7 @@ class DynaRoach(object):
         cmd_stop = channel + chr(0)
 
         print("Testing motor. Place the motor on a flat surface and hold it down.")
-		
+
         for i in range(0,2):
 
             cmd_data = channel+chr(int(duty_cycle*100))
@@ -324,8 +327,8 @@ class DynaRoach(object):
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
 
             if channel_num == 1:
-				assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
-				assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
+                assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
+                assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
 
         print("Test passed.")
 
@@ -415,17 +418,21 @@ class DynaRoach(object):
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SMA, cmd_side+cmd_stop)
 
     def wii_dump(self):
-		self.wiidata= [];
-		print("Wii Camera Reading")
-		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
-		time.sleep(0.7) #necessary to receive the information
-		b= np.zeros(shape=(4,3))
-		for i in range(4):
-			b[i] = self.wiidata[3*i:3*(i+1)] #Fill each row with each blob's information (x, y, size)
-			if b[i][1] == 256: #Invalid Blog will hit 'blob x not found print
-				print('blob'+' '+str(i+1)+' '+'not found')
-			else:
-				print('blob'+' '+str(i+1)+' '+'is at'+str(b[i][0:2]))
+        self.wiidata= [];
+        print("Wii Camera Reading")
+        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
+        time.sleep(0.7) #necessary to receive the information
+        b= np.zeros(shape=(4,3))
+        for i in range(4):
+            print(self.wiidata)
+            b[i] = self.wiidata[3*i:3*(i+1)] #Fill each row with each blob's information (x, y, size)
+            if b[i][1] == 256: #Invalid Blog will hit 'blob x not found print
+                print('blob'+' '+str(i+1)+' '+'not found')
+            else:
+                print('blob'+' '+str(i+1)+' '+'is at'+str(b[i][0:2]))
+        plt.scatter(b[:,0],b[:,1], s = b[:,2])
+        plt.show()
+
 
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
@@ -628,5 +635,4 @@ def datestring():
   mi = '%02d'%t.tm_min
 
   return ye+mo+da+'-'+ho+mi
-
 
