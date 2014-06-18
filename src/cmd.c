@@ -890,18 +890,13 @@ void motor_falling_edge() {
 }
 
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
-    unsigned char wii_data[20] = {1};  
+    WiiBlob Blobs[4]; 
+    //char wii_place[4] = {'0','0','0','0'};
+	unsigned char * wii_ptr; 
     int i;
-    WiiBlob B;
-    
-    while(1){
-		wiiGetData(&B);
-		delay_ms(1000);
-		MD_LED_1 = ~MD_LED_1;
-	}
-	wiiDumpData(wii_data);
-	delay_ms(1000);
-    send(status, 12, wii_data, CMD_WII_DUMP, last_addr);
+	//wiiGetData(Blobs);
+	wii_ptr= wiiReadData();
+	send(status, 12, wii_ptr, CMD_WII_DUMP);
 }
 
 static int prevHall = 0;
