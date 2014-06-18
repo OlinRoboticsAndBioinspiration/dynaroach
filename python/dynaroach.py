@@ -415,9 +415,17 @@ class DynaRoach(object):
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SMA, cmd_side+cmd_stop)
 
     def wii_dump(self):
-
-        frame = ''.join(chr(0) for i in range(12))
-        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,frame)
+		self.wiidata= [];
+		print("Wii Camera Reading")
+		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
+		time.sleep(0.7) #necessary to receive the information
+		b= np.zeros(shape=(4,3))
+		for i in range(4):
+			b[i] = self.wiidata[3*i:3*(i+1)] #Fill each row with each blob's information (x, y, size)
+			if b[i][1] == 256: #Invalid Blog will hit 'blob x not found print
+				print('blob'+' '+str(i+1)+' '+'not found')
+			else:
+				print('blob'+' '+str(i+1)+' '+'is at'+str(b[i][0:2]))
 
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
