@@ -896,7 +896,7 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
     int i;
 	//wiiGetData(Blobs);
 	wii_ptr= wiiReadData();
-	send(status, 12, wii_ptr, CMD_WII_DUMP);
+	send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
 }
 
 static int prevHall = 0;
