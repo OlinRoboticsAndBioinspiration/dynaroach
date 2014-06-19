@@ -419,28 +419,31 @@ class DynaRoach(object):
 
     def wii_dump(self):
         i=0
-        fig = plt.figure()
-        plt.axes([0,1024,0,768])
         plt.ion()
+        fig = plt.figure()
+        #plt.axes([0,1024,0,768])
         plt.show()
         b= np.zeros(shape=(4,3))
-        while i<10:
+        self.wiidata= []
+        while(1):# when need a continuous 
 			print('capture'+str(i))
-			self.wiidata= []
-		    print("Wii Camera Reading")
+			print("Wii Camera Reading")
 			self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
-			time.sleep(1) #necessary to receive the information
+			time.sleep(0.001) #necessary to receive the information
 			for j in range(4):
 				print(self.wiidata)
 				b[j] = self.wiidata[3*j:3*(j+1)] #Fill each row with each blob's information (x, y, size)
-				if b[j][1] == 255: #Invalid Blob will hit 'blob x not found print
+				if b[j][0] == 255: #Invalid Blob will hit 'blob x not found print
 					print('blob'+' '+str(j+1)+' '+'not found')
+					b[j][2]=0
 				else:
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2]))
 			plt.scatter(b[:,0],b[:,1],s= b[:,2])
-			i+=1
 			plt.draw()
-			time.sleep(1)
+			#time.sleep(0.1)
+			i +=1
+			#plt.pause(0.0001)
+			plt.clf()
         
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
