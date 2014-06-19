@@ -416,15 +416,18 @@ class DynaRoach(object):
             print("If the "+sides[i]+ " channel is showing a square wave, SMA is working.")
             time.sleep(2.5)
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SMA, cmd_side+cmd_stop)
-
+    
+    #WII DUMP=  Tells where the LEDs. Updates every 1ms)
     def wii_dump(self):
         i=0
         plt.ion()
         fig = plt.figure()
-        #plt.axes([0,1024,0,768])
         plt.show()
         b= np.zeros(shape=(4,3))
         self.wiidata= []
+        sclx= 4.01568
+        scly= 3.01176
+        sclb= 0.35294
         while(1):# when need a continuous 
 			print('capture'+str(i))
 			print("Wii Camera Reading")
@@ -438,11 +441,10 @@ class DynaRoach(object):
 					b[j][2]=0
 				else:
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2]))
-			plt.scatter(b[:,0],b[:,1],s= b[:,2])
+			plt.scatter(b[:,0]*sclx,b[:,1]*scly,s= b[:,2]*sclb)
+			plt.axis([0,1024,0,768])
 			plt.draw()
-			#time.sleep(0.1)
 			i +=1
-			#plt.pause(0.0001)
 			plt.clf()
         
     def get_sample_count(self):
