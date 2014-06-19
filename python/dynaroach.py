@@ -143,7 +143,7 @@ class DynaRoach(object):
         elif typeID == cmd.GET_BACK_EMF:
             self.bemf=(unpack('H',data)[0])
         elif typeID == cmd.WII_DUMP:
-            print("Wii data")
+            #print("Wii data")
             self.wiidata = unpack('12B',data)
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
@@ -418,24 +418,30 @@ class DynaRoach(object):
             self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SMA, cmd_side+cmd_stop)
 
     def wii_dump(self):
-        self.wiidata= [];
-        print("Wii Camera Reading")
-		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
-		time.sleep(1) #necessary to receive the information
-		b= np.zeros(shape=(4,3))
-		for j in range(4):
-			#print(self.wiidata)
-			b[j] = self.wiidata[3*i:3*(j+1)] #Fill each row with each blob's information (x, y, size)
-			if b[j][1] == 255: #Invalid Blob will hit 'blob x not found print
-				print('blob'+' '+str(j+1)+' '+'not found')
-				b[j][2]=0
-			else:
-				print('blob'+' '+str(i+1)+' '+'is at'+str(b[j][0:2]))
-		plt.hold(False)
-		plt.scatter(b[:,0],b[:,1], s = b[:,2])
-		plt.show()
-
-
+        i=0
+        fig = plt.figure()
+        plt.axes([0,1024,0,768])
+        plt.ion()
+        plt.show()
+        b= np.zeros(shape=(4,3))
+        while i<10:
+			print('capture'+str(i))
+			self.wiidata= []
+		    print("Wii Camera Reading")
+			self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
+			time.sleep(1) #necessary to receive the information
+			for j in range(4):
+				print(self.wiidata)
+				b[j] = self.wiidata[3*j:3*(j+1)] #Fill each row with each blob's information (x, y, size)
+				if b[j][1] == 255: #Invalid Blob will hit 'blob x not found print
+					print('blob'+' '+str(j+1)+' '+'not found')
+				else:
+					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2]))
+			plt.scatter(b[:,0],b[:,1],s= b[:,2])
+			i+=1
+			plt.draw()
+			time.sleep(1)
+        
     def get_sample_count(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
 
