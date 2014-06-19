@@ -144,7 +144,7 @@ class DynaRoach(object):
             self.bemf=(unpack('H',data)[0])
         elif typeID == cmd.WII_DUMP:
             print("Wii data")
-            self.wiidata = unpack('12B',data)
+            self.wiidata = unpack('12b',data)
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
@@ -423,6 +423,7 @@ class DynaRoach(object):
         self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
         time.sleep(0.7) #necessary to receive the information
         b= np.zeros(shape=(4,3))
+        n = b
         for i in range(4):
             print(self.wiidata)
             b[i] = self.wiidata[3*i:3*(i+1)] #Fill each row with each blob's information (x, y, size)
@@ -430,6 +431,10 @@ class DynaRoach(object):
                 print('blob'+' '+str(i+1)+' '+'not found')
             else:
                 print('blob'+' '+str(i+1)+' '+'is at'+str(b[i][0:2]))
+            if b[i][1] == 255:
+                n[i] = [0,0,0]
+            else:
+                n[i] = b[i]
         plt.scatter(b[:,0],b[:,1], s = b[:,2])
         plt.show()
 
