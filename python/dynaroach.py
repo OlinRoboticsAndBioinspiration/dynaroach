@@ -24,8 +24,8 @@ from matplotlib import pyplot as plt
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
-#DEFAULT_DEST_ADDR = '\x00\x15'
+#DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -144,7 +144,7 @@ class DynaRoach(object):
             self.bemf=(unpack('H',data)[0])
         elif typeID == cmd.WII_DUMP:
             print("Wii data")
-            self.wiidata = unpack('12b',data)
+            self.wiidata = unpack('12B',data)
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
@@ -420,23 +420,20 @@ class DynaRoach(object):
     def wii_dump(self):
         self.wiidata= [];
         print("Wii Camera Reading")
-        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
-        time.sleep(0.7) #necessary to receive the information
-        b= np.zeros(shape=(4,3))
-        n = b
-        for i in range(4):
-            print(self.wiidata)
-            b[i] = self.wiidata[3*i:3*(i+1)] #Fill each row with each blob's information (x, y, size)
-            if b[i][1] == 256: #Invalid Blog will hit 'blob x not found print
-                print('blob'+' '+str(i+1)+' '+'not found')
-            else:
-                print('blob'+' '+str(i+1)+' '+'is at'+str(b[i][0:2]))
-            if b[i][1] == 255:
-                n[i] = [0,0,0]
-            else:
-                n[i] = b[i]
-        plt.scatter(b[:,0],b[:,1], s = b[:,2])
-        plt.show()
+		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
+		time.sleep(1) #necessary to receive the information
+		b= np.zeros(shape=(4,3))
+		for j in range(4):
+			#print(self.wiidata)
+			b[j] = self.wiidata[3*i:3*(j+1)] #Fill each row with each blob's information (x, y, size)
+			if b[j][1] == 255: #Invalid Blob will hit 'blob x not found print
+				print('blob'+' '+str(j+1)+' '+'not found')
+				b[j][2]=0
+			else:
+				print('blob'+' '+str(i+1)+' '+'is at'+str(b[j][0:2]))
+		plt.hold(False)
+		plt.scatter(b[:,0],b[:,1], s = b[:,2])
+		plt.show()
 
 
     def get_sample_count(self):
