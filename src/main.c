@@ -88,21 +88,6 @@ int main ( void )
     unsigned int network_basestation_pan_id = get_pan_id();
     unsigned int network_basestation_addr = get_basestation_addr();
 
-    if (network_src_addr == 0x0012){
-        LED_1 = 1;
-        delay_ms(1000);
-    }
-
-    if (network_basestation_pan_id == 0){
-        LED_2 = 1;
-        delay_ms(1000);
-    }
-
-    if (network_basestation_channel == 0x0014){
-        LED_3 = 1;
-        delay_ms(1000);
-    }
-
     SetupClock();
     SwitchClocks();
     SetupPorts();
@@ -169,8 +154,6 @@ int main ( void )
     sclockSetup();
     timer1Setup();
     timer2Setup();
-    LED_1 = 0;
-    delay_ms(1000);
     cmdSetup();
     attSetup(1.0/TIMER1_FCY);
     char j;
@@ -184,7 +167,7 @@ int main ( void )
         delay_ms(100);
     }
 	
-    //wiiSetupBasic();
+    wiiSetupBasic();
 	
     LED_1 = 1;
     LED_2 = 1;
