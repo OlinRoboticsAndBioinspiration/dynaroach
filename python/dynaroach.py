@@ -24,8 +24,8 @@ from matplotlib import pyplot as plt
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
-#DEFAULT_DEST_ADDR = '\x00\x15'
+#DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -427,7 +427,7 @@ class DynaRoach(object):
         self.wiidata= []
         sclx= 4.01568
         scly= 3.01176
-        sclb= 0.35294
+        sclb= 1 #0.35294
         self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
 
         while(1):# when need a continuous 
@@ -435,7 +435,7 @@ class DynaRoach(object):
 			print("Wii Camera Reading")
 			time.sleep(0.1) #necessary to receive the information
 			for j in range(4):
-				print(self.wiidata)
+				#print(self.wiidata)
 				b[j] = self.wiidata[3*j:3*(j+1)] #Fill each row with each blob's information (x, y, size)
 				if b[j][0] == 255: #Invalid Blob will hit 'blob x not found print
 					print('blob'+' '+str(j+1)+' '+'not found')
