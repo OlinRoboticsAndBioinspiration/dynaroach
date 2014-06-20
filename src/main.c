@@ -184,7 +184,7 @@ int main ( void )
         delay_ms(100);
     }
 	
-    //wiiSetupBasic();
+    wiiSetupBasic();
 	
     LED_1 = 1;
     LED_2 = 1;
