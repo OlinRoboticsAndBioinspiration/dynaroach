@@ -893,13 +893,13 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
     WiiBlob Blobs[4]; 
     //char wii_place[4] = {'0','0','0','0'};
 	unsigned char * wii_ptr; 
-    //int i;
+    int i=0;
 	//wiiGetData(Blobs);
-	while(1){
+	while(i<100){
 		wii_ptr= wiiReadData();
-		delay_ms(0.4);
-		send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
 		delay_ms(100);
+		send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
+		i++;
 		}
 	}
 
