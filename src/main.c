@@ -36,6 +36,8 @@
 #include "wii.h"
 #include <stdio.h>
 
+static int send_IR = 0;
+
 void initDma0(void)
 {
     DMA0CONbits.AMODE = 0;                      //Configure DMA for register indirect with post increment
@@ -75,6 +77,25 @@ static void timer2Setup(void)
     OpenTimer2(conf_reg, period);
     ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
     _T2IE = 1;
+}
+
+static void timer4Setup(void){
+
+    unsigned int conf_reg, period;
+    conf_reg = T4_ON & T4_SOURCE_INT & T4_PS_1_256 & T4_GATE_OFF;
+
+    period = (unsigned int)0x138;
+    OpenTimer4(conf_reg,period);
+    ConfigIntTimer4(T4_INT_PRIOR_4);
+
+    IPC2bits.T4IP = 2;
+    IEC0bits.T4IE = 1;
+}
+
+void __attribute__((__interrupt__)) _T3Interrupt(void)
+{
+    send_IR = 1;
+    IFS0bits.T3IF = 0;
 }
 
 int main ( void )
@@ -154,6 +175,7 @@ int main ( void )
     sclockSetup();
     timer1Setup();
     timer2Setup();
+    timer3Setup();
     cmdSetup();
     attSetup(1.0/TIMER1_FCY);
     char j;
@@ -182,6 +204,11 @@ int main ( void )
     while(1){
         cmdHandleRadioRxBuffer();
         radioProcess();
+        if (send_IR){
+            char frame[1];
+            send_IR = 0;
+            cmdWiiObs(STATUS_UNUSED,1,frame);
+        }
     }
     return 0;
 }

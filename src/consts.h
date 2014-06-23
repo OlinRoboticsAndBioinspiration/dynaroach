@@ -47,7 +47,8 @@
 #define CMD_GET_GYRO_CALIB_PARAM    0x0B
 #define CMD_TEST_SWEEP              0x0C
 #define CMD_GET_BACK_EMF			0x0D
-#define CMD_WII_DUMP				0x0E
+#define CMD_WII_DUMP				0x0E//Todo: move these.  They really aren't for testing.
+#define CMD_WII_OBS					0x0F
 
 #define TEST_PACKET_INTERVAL_MS 1000
 #define NUM_TEST_PACKETS        1
