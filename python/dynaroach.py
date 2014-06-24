@@ -72,6 +72,10 @@ MOTOR_RANGE = 20
 BATT_BASE = 785
 BATT_RANGE = 15
 
+PROCESS_COV = .2 #this is just a placeholder until we work out the actual error!
+MEAS_COV = .2 #see above
+STATE_TRAN = 1 #assuming that the leader is moving forward
+
 class DynaRoach(object):
 	'''Class representing the dynaRoACH robot'''
 
@@ -109,6 +113,10 @@ class DynaRoach(object):
 		self.dfmem_page_size = DFMEM_PAGE_SIZES[dest_addr]
 		self.wiidata=[]
 
+		self.measurement = []
+		self.dot_pos = int(1023/2)
+		self.error = 0
+
 	def add_receive_callback(self, callback):
 		self.receive_callback.append(callback)
 
@@ -144,10 +152,33 @@ class DynaRoach(object):
 			self.bemf=(unpack('H',data)[0])
 		elif typeID == cmd.WII_DUMP:
 			self.wiidata = unpack('12B',data)
+		elif typeID == cmd.WII_DATUM:
+			self.measurement = [bin(x)[2:] for x in unpack('12B,data')[:3]]
+			self.kalman()
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
 			  datum = list(unpack('<L3f3h2HB4H', data))
 			  # print datum[6:]
+
+	def _kalman(self):
+		x_meas = int((self.measurement[0]+self.measurement[2][4:6]),2)
+
+		prior_pos = self.dot_pos
+		self.dot_pos = self.dot_pos*STATE_TRAN#really only here if we ever add a transition- maybe size?
+		self.error = self.error + PROCESS_COV
+
+		m_gain = self.error/(self.error + IR_ERROR)
+		self.dot_pos = dot_pos + m_gain*(x_meas - self.dot_pos)
+		self.error = (1-m_gain)*self.error
+
+		#error checking
+		if prior_pos < self.dot_pos:
+			print("Dot moved left")
+		elif self.dot_pos == prior_pos:
+			print("Dot moved right")
+		else:
+			print("Dot immobile")
+
 
 	def echo(self):
 		'''
@@ -424,10 +455,9 @@ class DynaRoach(object):
 		plt.show()
 		b= np.zeros(shape =(4,3))
 		self.wiidata = [0]*12
-		print self.wiidata
 		#sclx= 4.01568
 		#scly= 3.01176
-		sclb= 1 #0.35294
+		sclb=1 #0.35294
 		sclx=1
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
@@ -439,6 +469,7 @@ class DynaRoach(object):
 			for j in range(4):
 				ind = 3*j
 				sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
+				print sread
 				b[j] = [int((sread[0]+sread[2][4:6]),2),int((sread[1]+sread[2][6:]),2),10*int(sread[2][:4],2)]
 				if b[j][0] == 1023: #Invalid Blob will hit 'blob x not found print
 					print('blob'+' '+str(j+1)+' '+'not found')
@@ -446,7 +477,7 @@ class DynaRoach(object):
 				else:
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
 
-			plt.scatter(b[:,0]*sclx,b[:,1]*scly,s= b[:,2]*sclb)
+			plt.scatter(b[:,0],b[:,1],s= b[:,2])
 			plt.axis([0,1023,0,1023])
 			plt.draw()
 			i +=1
