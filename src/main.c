@@ -36,8 +36,6 @@
 #include "wii.h"
 #include <stdio.h>
 
-static int send_IR = 0;
-
 void initDma0(void)
 {
     DMA0CONbits.AMODE = 0;                      //Configure DMA for register indirect with post increment
@@ -60,7 +58,6 @@ static void timer1Setup(void)
     unsigned long period;
     conf_reg = T1_ON & T1_SOURCE_INT & T1_PS_1_256 & T1_GATE_OFF & T1_SYNC_EXT_OFF;
     period = (unsigned int)0x271; //timer period 4ms = period/FCY * prescaler
-
     OpenTimer1(conf_reg, period);
     ConfigIntTimer1(T1_INT_PRIOR_4 & T1_INT_OFF);
 }
@@ -73,10 +70,24 @@ static void timer2Setup(void)
     //Period in us is 1/40*period.
     //period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
     //period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
-    period = (unsigned int)0x138; //timer period 1ms = period/FCY.
+    period = (unsigned int)0x138; //timer period 2ms = period/FCY * prescaler.
     OpenTimer2(conf_reg, period);
     ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
     _T2IE = 1;
+}
+
+static void timer6Setup(void)
+{
+	T6CONbits.TON = 0; // Disable Timer
+	T6CONbits.TCS = 0; // Select internal instruction cycle clock 
+	T6CONbits.TGATE = 0; // Disable Gated Timer mode
+	T6CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
+	TMR1 = 0x00; // Clear timer register
+	PR1 = 156000; // Load the period value (1125ms)
+	IPC11bits.T6IP = 0x04; //priority
+	IFS2bits.T6IF = 0; //Flag =0
+	IEC2bits.T6IE = 1; //Enable interrupt
+	T6CONbits.TON = 1; //Turn the timer on
 }
 
 int main ( void )
@@ -156,6 +167,7 @@ int main ( void )
     sclockSetup();
     timer1Setup();
     timer2Setup();
+    timer6Setup();
     cmdSetup();
     attSetup(1.0/TIMER1_FCY);
     char j;
@@ -169,7 +181,7 @@ int main ( void )
         delay_ms(100);
     }
 	
-    //wiiSetupBasic();
+    wiiSetupBasic();
 	
     LED_1 = 1;
     LED_2 = 1;
@@ -177,9 +189,9 @@ int main ( void )
 
     char frame[5];
 
-    send(STATUS_UNUSED, 5, frame, '30', network_basestation_addr);
-    send(STATUS_UNUSED, 5, frame, '30', network_basestation_addr);
-    send(STATUS_UNUSED, 5, frame, '30', network_basestation_addr);
+    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
+    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
+    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
     //radioDeleteQueues();
     while(1){
         cmdHandleRadioRxBuffer();
