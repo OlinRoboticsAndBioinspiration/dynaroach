@@ -105,7 +105,6 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
-static void cmdWiiObs(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
 //Delete these once trackable management code is working
@@ -149,7 +148,6 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
-    cmd_func[CMD_WII_OBS]= &cmdWiiObs;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -892,7 +890,7 @@ void motor_falling_edge() {
 }
 
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
-    WiiBlob Blobs[4]; 
+    //WiiBlob Blobs[4]; 
     //char wii_place[4] = {'0','0','0','0'};
 	unsigned char * wii_ptr; 
     int i=0;
@@ -904,13 +902,6 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
 		i++;
 		}
 	}
-
-void cmdWiiObs(unsigned char status, unsigned char length, unsigned char* frame){//Version of wiiDump that sends 1 observation
-    WiiBlob blobs[4];
-    unsigned char * wii_ptr = wiiReadData();
-    delay_ms(100);
-    send(status, 12, wii_ptr, CMD_WII_OBS, last_addr); 
-}
 
 static int prevHall = 0;
 
