@@ -160,12 +160,13 @@ class DynaRoach(object):
 			  datum = list(unpack('<L3f3h2HB4H', data))
 			  # print datum[6:]
 
-	def kalman(self):
+	def _kalman(self):
+
 		for i in range(4):
 			bin_rep = [bin(x)[2:] for x in self.wiidata[i:i+3]]
 			x_meas = int(bin_rep[1]+ bin_rep[2][4:6])
-			if (x_meas is not 1023):
-				break
+			if (x_meas is not 1023):#blob exists
+				return
 
 		if (x_meas is 1023):#checks if the last of four dots is invalid, having checked all other dots beforehand
 			print("No blobs found.")
@@ -483,6 +484,8 @@ class DynaRoach(object):
 					b[j][2]=0
 				else:
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
+
+			self.kalman()
 
 			plt.scatter(b[:,0],b[:,1],s= b[:,2])
 			plt.axis([0,1023,0,1023])
