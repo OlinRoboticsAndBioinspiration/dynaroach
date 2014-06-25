@@ -462,6 +462,7 @@ class DynaRoach(object):
 		i=0
 		plt.ion()
 		fig = plt.figure()
+		ax1 = fig.add_subplot(111)
 		plt.show()
 		b= np.zeros(shape =(4,3))
 		self.wiidata = [0]*12
@@ -471,26 +472,32 @@ class DynaRoach(object):
 		sclx=1
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
-
-		while(self.num_obs % 1000):# when need a continuous Set the number in order to change the frame
+		while(self.num_obs % 100):# when need a continuous Set the number in order to change the frame
 			print('capture'+str(i))
-			print("Wii Camera Reading")
-			time.sleep(.1) #necessary to receive the information
+			#print("Wii Camera Reading")
+			#time.sleep(.01) necessary to receive the information
 			for j in range(4):
 				ind = 3*j
 				sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
-				print sread
+				#print sread
 				b[j] = [int((sread[0]+sread[2][4:6]),2),int((sread[1]+sread[2][6:]),2),10*int(sread[2][:4],2)]
 				if b[j][0] == 1023: #Invalid Blob will hit 'blob x not found print
-					print('blob'+' '+str(j+1)+' '+'not found')
+					#print('blob'+' '+str(j+1)+' '+'not found')
 					b[j][2]=0
 				else:
+					self.dot_pos= b[0][0]
+					prior_pos = self.dot_pos
+					self.dot_pos = self.dot_pos *STATE_TRAN
+					self.error = self.error + PROCESS_COV
+					m_gain = self.error/(self.error + MEAS_COV)
+					self.dot_pos = self.dot_pos + m_gain*(b[0][0]- self.dot_pos)
+					self.error = (1-m_gain)*self.error
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
 
-			self.kalman()
-
-			plt.scatter(b[:,0],b[:,1],s= b[:,2])
-			plt.scatter(self.dot_pos,b[1][0],s = 20, c = 'r')
+			plt.scatter(b[:,0],b[:,1],s= b[:,2]*10, c= 'b', label='real data')
+			plt.scatter(self.dot_pos, b[0][1], s= 20, c='r', label= 'filtered')
+			#plt.scatter(self.dot_pos,b[1][0],s = 20, c = 'r')
+			#plt.legend(loc= 'upper left')
 			plt.axis([0,1023,0,1023])
 			plt.draw()
 			i +=1
