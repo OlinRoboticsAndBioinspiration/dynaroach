@@ -117,6 +117,8 @@ class DynaRoach(object):
 		self.dot_pos = int(1023/2)
 		self.error = 0
 
+		self.num_obs = 0
+
 	def add_receive_callback(self, callback):
 		self.receive_callback.append(callback)
 
@@ -151,6 +153,7 @@ class DynaRoach(object):
 		elif typeID == cmd.GET_BACK_EMF:
 			self.bemf=(unpack('H',data)[0])
 		elif typeID == cmd.WII_DUMP:
+			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
 		# elif typeID == cmd.WII_DATUM:
 		# 	self.measurement = [bin(x)[2:] for x in unpack('12B,data')[:3]]
@@ -167,7 +170,7 @@ class DynaRoach(object):
 			if (x_meas is not 1023):#blob exists
 				break
 
-		if (x_meas is 1023):#checks if the last of four dots is invalid, having checked all other dots beforehand
+		if (x_meas == 1023):#checks if the last of four dots is invalid, having checked all other dots beforehand
 			print("No blobs found.")
 			return #do something else here- start the "no blobs" routine
 
@@ -469,7 +472,7 @@ class DynaRoach(object):
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
 
-		while(1):# when need a continuous 
+		while(self.num_obs % 100):# when need a continuous 
 			print('capture'+str(i))
 			print("Wii Camera Reading")
 			time.sleep(.1) #necessary to receive the information
