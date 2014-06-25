@@ -495,7 +495,7 @@ class DynaRoach(object):
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
 
 			plt.scatter(b[:,0],b[:,1],s= b[:,2]*10, c= 'b', label='real data')
-			plt.scatter(self.dot_pos, b[0][1], s= 20, c='r', label= 'filtered')
+			plt.scatter(self.dot_pos, b[0][1], s= 20, c='r', label= 'filtered') # since we are only doing x coordinate (1d) we used measured y data
 			#plt.scatter(self.dot_pos,b[1][0],s = 20, c = 'r')
 			#plt.legend(loc= 'upper left')
 			plt.axis([0,1023,0,1023])
