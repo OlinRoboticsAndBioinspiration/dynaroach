@@ -495,6 +495,8 @@ class DynaRoach(object):
 			plt.draw()
 			i +=1
 			plt.clf()
+
+		plt.close()
 		
 	def get_sample_count(self):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
