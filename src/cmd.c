@@ -52,6 +52,7 @@ static uByte2 sample_cnt;
 static int streamMod = 0;
 static int is_data_streaming = 0;
 static int readWiiData = 0;
+static int Wiiinvalid= 0;
 
 unsigned int get_src_addr(void){
     TBLPAG = 0x0;
@@ -895,17 +896,15 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
     //char wii_place[4] = {'0','0','0','0'};
 	unsigned char * wii_ptr; 
     readWiiData =1;
-    int i=0;
+    Wiiinvalid =0;
 	//wiiGetData(Blobs);
-	while(readWiiData=1){
+	while(readWiiData==1){
 		wii_ptr= wiiReadData();
 		delay_ms(100);
+			if (wiiFindTarget(Blobs) == -1){
+		Wiiinvalid++;
 		send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
-		if (wiiFindTarget(Blobs) == -1){
-			i++;
-		if(i==200){
-			break;}
-			
+
 		}
 	}
 }
@@ -930,7 +929,11 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 
 void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 {
-  readWiiData= 0;
-  MD_LED_1 = ~MD_LED_1;
-  _T6IF = 0;
+
+	if(Wiiinvalid>=300){
+		readWiiData= 0;
+		MD_LED_1 = ~MD_LED_1;
+	}
+    _T6IF = 0;
+  
 }
