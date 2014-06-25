@@ -152,22 +152,29 @@ class DynaRoach(object):
 			self.bemf=(unpack('H',data)[0])
 		elif typeID == cmd.WII_DUMP:
 			self.wiidata = unpack('12B',data)
-		elif typeID == cmd.WII_DATUM:
-			self.measurement = [bin(x)[2:] for x in unpack('12B,data')[:3]]
-			self.kalman()
+		# elif typeID == cmd.WII_DATUM:
+		# 	self.measurement = [bin(x)[2:] for x in unpack('12B,data')[:3]]
+		# 	self.kalman()
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
 			  datum = list(unpack('<L3f3h2HB4H', data))
 			  # print datum[6:]
 
-	def _kalman(self):
-		x_meas = int((self.measurement[0]+self.measurement[2][4:6]),2)
+	def kalman(self):
+		for i in range(4):
+			bin_rep = [bin(x)[2:] for x in self.wiidata[i:i+3]]
+			x_meas = int(bin_rep[1]+ bin_rep[2][4:6])
+			if (x_meas is not 1023):
+				break
+
+		if (x_meas is 1023):#checks if the last of four dots is invalid, having checked all other dots beforehand
+			break
 
 		prior_pos = self.dot_pos
 		self.dot_pos = self.dot_pos*STATE_TRAN#really only here if we ever add a transition- maybe size?
 		self.error = self.error + PROCESS_COV
 
-		m_gain = self.error/(self.error + IR_ERROR)
+		m_gain = self.error/(self.error + MEAS_COV)
 		self.dot_pos = dot_pos + m_gain*(x_meas - self.dot_pos)
 		self.error = (1-m_gain)*self.error
 
@@ -178,7 +185,6 @@ class DynaRoach(object):
 			print("Dot moved right")
 		else:
 			print("Dot immobile")
-
 
 	def echo(self):
 		'''
