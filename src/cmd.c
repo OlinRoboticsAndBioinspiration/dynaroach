@@ -903,7 +903,7 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
 		send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
 		if (wiiFindTarget(Blobs) == -1){
 			i++;
-			if(i==200){
+		if(i==200){
 			break;}
 			
 		}
@@ -931,6 +931,6 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 {
   readWiiData= 0;
-  //MD_LED_1 = ~MD_LED_1;
+  MD_LED_1 = ~MD_LED_1;
   _T6IF = 0;
 }

@@ -92,9 +92,9 @@ static void timer6Setup(void)
 
 int main ( void )
 {
-    LED_1 = 0;
-    LED_2 = 0;
-    LED_3 = 0;
+    //LED_1 = 0;
+    //LED_2 = 0;
+    //LED_3 = 0;
 
     unsigned int network_src_addr = get_src_addr();
     unsigned int network_basestation_channel = get_channel();
@@ -109,9 +109,9 @@ int main ( void )
     spicSetupChannel2();
     ppoolInit();
 
-    LED_1=1;
-    LED_2=1;
-    LED_3=1;
+    //LED_1=1;
+    //LED_2=1;
+    //LED_3=1;
 
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
     radioSetSrcAddr(network_src_addr);//defined by bootloader
@@ -119,8 +119,8 @@ int main ( void )
     radioSetChannel(network_basestation_channel);
     //END RADIO SETUP
 
-    LED_2 = 0;
-    delay_ms(2000);
+    //LED_2 = 0;
+    //delay_ms(2000);
 
     //BEGIN I2C SETUP
     unsigned int I2C1CONvalue, I2C1BRGvalue;
