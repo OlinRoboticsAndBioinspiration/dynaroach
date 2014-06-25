@@ -168,7 +168,8 @@ class DynaRoach(object):
 				break
 
 		if (x_meas is 1023):#checks if the last of four dots is invalid, having checked all other dots beforehand
-			break
+			print("No blobs found.")
+			break #do something else here- start the "no blobs" routine
 
 		prior_pos = self.dot_pos
 		self.dot_pos = self.dot_pos*STATE_TRAN#really only here if we ever add a transition- maybe size?
