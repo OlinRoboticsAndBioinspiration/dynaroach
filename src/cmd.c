@@ -901,12 +901,10 @@ void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame
 	while(readWiiData==1){
 		wii_ptr= wiiReadData();
 		delay_ms(100);
-			if (wiiFindTarget(Blobs) == -1){
-		Wiiinvalid++;
+		if (wiiFindTarget(Blobs) == -1){
+		Wiiinvalid++;}
 		send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
-
 		}
-	}
 }
 
 static int prevHall = 0;
@@ -932,7 +930,7 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 
 	if(Wiiinvalid>=300){
 		readWiiData= 0;
-		MD_LED_1 = ~MD_LED_1;
+		MD_LED_1 = ~MD_LED_1; //When Motor Drive LED blinks, it means it has detected wiiinvalid blobs so many times so it stops sending.
 	}
     _T6IF = 0;
   
