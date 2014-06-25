@@ -160,8 +160,7 @@ class DynaRoach(object):
 			  datum = list(unpack('<L3f3h2HB4H', data))
 			  # print datum[6:]
 
-	def _kalman(self):
-
+	def kalman(self):
 		for i in range(4):
 			bin_rep = [bin(x)[2:] for x in self.wiidata[i:i+3]]
 			x_meas = int(bin_rep[1]+ bin_rep[2][4:6])
@@ -177,7 +176,7 @@ class DynaRoach(object):
 		self.error = self.error + PROCESS_COV
 
 		m_gain = self.error/(self.error + MEAS_COV)
-		self.dot_pos = dot_pos + m_gain*(x_meas - self.dot_pos)
+		self.dot_pos = self.dot_pos + m_gain*(x_meas - self.dot_pos)
 		self.error = (1-m_gain)*self.error
 
 		#error checking
@@ -488,6 +487,7 @@ class DynaRoach(object):
 			self.kalman()
 
 			plt.scatter(b[:,0],b[:,1],s= b[:,2])
+			plt.scatter(self.dot_pos,b[1][0],s = 20, c = 'r')
 			plt.axis([0,1023,0,1023])
 			plt.draw()
 			i +=1
