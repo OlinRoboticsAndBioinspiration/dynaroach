@@ -24,7 +24,7 @@ from matplotlib import pyplot as plt
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x15'
 #DEFAULT_DEST_ADDR = '\x00\x15'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
@@ -117,7 +117,7 @@ class DynaRoach(object):
 		self.dot_pos = int(1023/2)
 		self.error = 0
 
-		self.num_obs = 0
+		self.num_obs = 1
 
 	def add_receive_callback(self, callback):
 		self.receive_callback.append(callback)
@@ -472,7 +472,7 @@ class DynaRoach(object):
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
 
-		while(self.num_obs % 100):# when need a continuous 
+		while(self.num_obs % 1000):# when need a continuous Set the number in order to change the frame
 			print('capture'+str(i))
 			print("Wii Camera Reading")
 			time.sleep(.1) #necessary to receive the information
