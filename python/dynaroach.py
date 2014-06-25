@@ -166,11 +166,11 @@ class DynaRoach(object):
 			bin_rep = [bin(x)[2:] for x in self.wiidata[i:i+3]]
 			x_meas = int(bin_rep[1]+ bin_rep[2][4:6])
 			if (x_meas is not 1023):#blob exists
-				return
+				break
 
 		if (x_meas is 1023):#checks if the last of four dots is invalid, having checked all other dots beforehand
 			print("No blobs found.")
-			break #do something else here- start the "no blobs" routine
+			return #do something else here- start the "no blobs" routine
 
 		prior_pos = self.dot_pos
 		self.dot_pos = self.dot_pos*STATE_TRAN#really only here if we ever add a transition- maybe size?
