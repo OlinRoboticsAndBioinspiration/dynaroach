@@ -471,7 +471,7 @@ class DynaRoach(object):
 		mw.show()
 		mw.setWindowTitle('WiiData')
 		box = view.addPlot()
-		wii= pg.ScatterPlotItem(size=10, pen=pg.mkPen(None), brush=pg.mkBrush(255, 255, 255, 120), clear=False)
+		wii= pg.ScatterPlotItem(size=10, brush=pg.mkBrush(255, 255, 255, 120)) #, clear= False)
 		#plt.ion()
 		#fig = plt.figure()
 		#ax1 = fig.add_subplot(111)
@@ -496,29 +496,25 @@ class DynaRoach(object):
 					#print('blob'+' '+str(j+1)+' '+'not found')
 					b[j][2]=0
 				else:
-					# self.dot_pos= b[0][0]
-					# prior_pos = self.dot_pos
-					# self.dot_pos = self.dot_pos *STATE_TRAN
-					# self.error = self.error + PROCESS_COV
-					# m_gain = self.error/(self.error + MEAS_COV)
-					# self.dot_pos = self.dot_pos + m_gain*(b[0][0]- self.dot_pos)
-					# self.error = (1-m_gain)*self.error
+					self.dot_pos= b[:,0]
+					prior_pos = self.dot_pos
+					self.dot_pos = self.dot_pos *STATE_TRAN
+					self.error = self.error + PROCESS_COV
+					m_gain = self.error/(self.error + MEAS_COV)
+					self.dot_pos = self.dot_pos + m_gain*(b[:,0]- self.dot_pos)
+					self.error = (1-m_gain)*self.error
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
 			#print(sread)
-			#print(b)
-			wii.addPoints(x=b[:,0], y=b[:,1], pen='w', brush='b', size=b[:,2])
-			time.sleep(1)
-
-
-			#wii.addPoints(x=self.dot_pos, y= b[0][1], brush = 'r', size=5)
+			print(b)
+			wii.addPoints(x=b[:,0],y=b[:,1],size=b[:,2]*2,brush='b') # pen='w', brush='b'
+			wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
 			box.addItem(wii)
 			box.setXRange(0,1024,update= False)
 			box.setYRange(0,1024,update= False)
-			#pw.label(axi
 			pg.QtGui.QApplication.processEvents()
 			wii.clear()
 			i+=1
-    				#app.processEvents()  ## force complete redraw for every plot
+
 			#plt.scatter(b[:,0],b[:,1],s= b[:,2]*10, c= 'b', label='real data')
 			#plt.scatter(self.dot_pos, b[0][1], s= 20, c='r', label= 'filtered') # since we are only doing x coordinate (1d) we used measured y data
 			#plt.axis([0,1023,0,1023])
