@@ -13,6 +13,8 @@ static _Q16 dutyCycleQ;
 
 static void mcSetupPeripheral(void);
 
+int pidInput; //really just here for storage/accessiblity between functions. Not great, fix this.
+
 void mcSetup(void)
 {
     mcSetupPeripheral();

@@ -18,7 +18,7 @@ env = Environment(PIC = '33Fj128MC706A',
                   AS = 'xc16-as',
                   #ASFLAGS = '-p33FJ128MC706A',
                   PROGSUFFIX = '.elf', 
-                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD  '+assemblerFlags,#+' -D__'+GetOption("destaddr"),
+                  CFLAGS = '-g -omf=elf -mcpu=$PIC -D__IMAGEPROC2 -D__BOOTLOAD '+assemblerFlags,#+' -D__'+GetOption("destaddr"),
                   LINKFLAGS = "-omf=elf -mcpu=$PIC -Wl,--script=\"p33FJ128MC706A_Bootload.gld\",--heap=8192,--stack=16",
                   #include paths
                   CPPPATH=[xcCompiler+"/support/dsPIC33F/h/",
@@ -54,10 +54,12 @@ imageProcLibFiles = [imageProc + "/" + n for n in [
     "carray.c",
     "mac_packet.c",
     "at86rf231_driver.c",
-    "wii.c"]]
+    "wii.c",
+    "pid.c"]]
     
 dynaroachFiles = Glob("src/*.c")
-staticLibs = [xcCompiler + "/lib/dsPIC33F/libp33FJ128MC706-elf.a", xcCompiler + "/lib/libq-elf.a"]
+print(xcCompiler+"support/generic/h/dsp.h")
+staticLibs = [xcCompiler + "/lib/dsPIC33F/libp33FJ128MC706-elf.a", xcCompiler + "/lib/libq-elf.a",xcCompiler+"support/generic/h/dsp.h"]
 
 env.Program('dynaroach', imageProcLibFiles + dynaroachFiles + staticLibs)
 

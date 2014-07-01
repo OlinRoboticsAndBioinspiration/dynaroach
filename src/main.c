@@ -34,46 +34,58 @@
 #include "ppool.h"
 #include "spi_controller.h"
 #include "wii.h"
+#include "pid.h"
+#include "pid_hw.h"
 #include <stdio.h>
+
+//these need tuning!
+#define PID_KP			.5
+#define PID_KI          .5
+#define PID_KD			.5
+
+#define PID_KFF			0 //system dependent feedforward term. 
+#define PID_KAW			.5 //antiwindup term
+
+static int pUpdate;
 
 void initDma0(void)
 {
-    DMA0CONbits.AMODE = 0;                      //Configure DMA for register indirect with post increment
-    DMA0CONbits.MODE = 0;                       //Configure DMA for continuous mode (not Ping Pong)
-    DMA0PAD = (int)&ADC1BUF0;                   //Peripheral address register: the ADC1 buffer
-    DMA0CNT = 0;                                //Transfer after ever 2 samples
-    DMA0REQ = 13;                               //Select ADC1 as DMA request source
-    DMA0STA = __builtin_dmaoffset(ADCBuffer);   //DMA RAM start address
+	DMA0CONbits.AMODE = 0;                      //Configure DMA for register indirect with post increment
+	DMA0CONbits.MODE = 0;                       //Configure DMA for continuous mode (not Ping Pong)
+	DMA0PAD = (int)&ADC1BUF0;                   //Peripheral address register: the ADC1 buffer
+	DMA0CNT = 0;                                //Transfer after ever 2 samples
+	DMA0REQ = 13;                               //Select ADC1 as DMA request source
+	DMA0STA = __builtin_dmaoffset(ADCBuffer);   //DMA RAM start address
 
-    IFS0bits.DMA0IF = 0;                        //Clear DMA interrupt flag bit
-    IEC0bits.DMA0IE = 1;                        //Enable DMA interrupt
-    DMA0CONbits.CHEN = 1;                       //Enable DMA channel
+	IFS0bits.DMA0IF = 0;                        //Clear DMA interrupt flag bit
+	IEC0bits.DMA0IE = 1;                        //Enable DMA interrupt
+	DMA0CONbits.CHEN = 1;                       //Enable DMA channel
 }
 
 static void timer1Setup(void);
 
 static void timer1Setup(void)
 {
-    unsigned int conf_reg;
-    unsigned long period;
-    conf_reg = T1_ON & T1_SOURCE_INT & T1_PS_1_256 & T1_GATE_OFF & T1_SYNC_EXT_OFF;
-    period = (unsigned int)0x271; //timer period 4ms = period/FCY * prescaler
-    OpenTimer1(conf_reg, period);
-    ConfigIntTimer1(T1_INT_PRIOR_4 & T1_INT_OFF);
+	unsigned int conf_reg;
+	unsigned long period;
+	conf_reg = T1_ON & T1_SOURCE_INT & T1_PS_1_256 & T1_GATE_OFF & T1_SYNC_EXT_OFF;
+	period = (unsigned int)0x271; //timer period 4ms = period/FCY * prescaler
+	OpenTimer1(conf_reg, period);
+	ConfigIntTimer1(T1_INT_PRIOR_4 & T1_INT_OFF);
 }
 
 static void timer2Setup(void)
 {
-    unsigned int conf_reg, period;
+	unsigned int conf_reg, period;
 
-    conf_reg = T2_ON & T2_SOURCE_INT & T2_PS_1_256 & T2_GATE_OFF;
-    //Period in us is 1/40*period.
-    //period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
-    //period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
-    period = (unsigned int)0x138; //timer period 2ms = period/FCY * prescaler.
-    OpenTimer2(conf_reg, period);
-    ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
-    _T2IE = 1;
+	conf_reg = T2_ON & T2_SOURCE_INT & T2_PS_1_256 & T2_GATE_OFF;
+	//Period in us is 1/40*period.
+	//period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
+	//period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
+	period = (unsigned int)0x138; //timer period 2ms = period/FCY * prescaler.
+	OpenTimer2(conf_reg, period);
+	ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
+	_T2IE = 1;
 }
 
 static void timer6Setup(void)
@@ -90,113 +102,172 @@ static void timer6Setup(void)
 	T6CONbits.TON = 1; //Turn the timer on
 }
 
+static void timer5Setup(void)
+{
+	T5CONbits.TON = 0; // Disable Timer
+	T5CONbits.TCS = 0; // Select internal instruction cycle clock 
+	T5CONbits.TGATE = 0; // Disable Gated Timer mode
+	T5CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
+	TMR1 = 0x00; // Clear timer register
+	PR1 = 156000; // Load the period value (1125ms)
+	IPC7bits.T5IP = 0x04; //priority
+	IFS1bits.T5IF = 0; //Flag =0
+	IEC1bits.T5IE = 1; //Enable interrupt
+	T5CONbits.TON = 1; //Turn the timer on
+}
+
+static int getFeedback(void)
+{
+    AD1CHS0bits.CH0SA = 0b00001;      //Select AN1 (back EMF) for sampling
+    AD1CON1bits.SAMP = 1;
+    while(!AD1CON1bits.DONE);
+    AD1CON1bits.SAMP = 0;
+    AD1CON1bits.DONE = 0;
+    unsigned short bemf= ADC1BUF0; 
+	return bemf;//results of conversion... need to get these)
+}
+
+void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void)
+{
+    pUpdate = !pUpdate;
+    LED_3 = ~LED_3;
+    _T5IF = 0;
+}
+
 int main ( void )
 {
-    //LED_1 = 0;
-    //LED_2 = 0;
-    //LED_3 = 0;
+	//LED_1 = 0;
+	//LED_2 = 0;
+	//LED_3 = 0;
 
-    unsigned int network_src_addr = get_src_addr();
-    unsigned int network_basestation_channel = get_channel();
-    unsigned int network_basestation_pan_id = get_pan_id();
-    unsigned int network_basestation_addr = get_basestation_addr();
+	unsigned int network_src_addr = get_src_addr();
+	unsigned int network_basestation_channel = get_channel();
+	unsigned int network_basestation_pan_id = get_pan_id();
+	unsigned int network_basestation_addr = get_basestation_addr();
 
-    SetupClock();
-    SwitchClocks();
-    SetupPorts();
+	pidInput = 0;//assume robot is stationary and should remain so until told to go//todo, make a speed controller. Something has to set this.
+	int pid_feedback = 0;
+	int dCycle;
 
-    spicSetupChannel1();
-    spicSetupChannel2();
-    ppoolInit();
+	int pUpdate = 1;
 
-    //LED_1=1;
-    //LED_2=1;
-    //LED_3=1;
+	SetupClock();
+	SwitchClocks();
+	SetupPorts();
 
-    radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
-    radioSetSrcAddr(network_src_addr);//defined by bootloader
-    radioSetSrcPanID(network_basestation_pan_id);
-    radioSetChannel(network_basestation_channel);
-    //END RADIO SETUP
+	spicSetupChannel1();
+	spicSetupChannel2();
+	ppoolInit();
 
-    //LED_2 = 0;
-    //delay_ms(2000);
+	//LED_1=1;
+	//LED_2=1;
+	//LED_3=1;
 
-    //BEGIN I2C SETUP
-    unsigned int I2C1CONvalue, I2C1BRGvalue;
-    I2C1CONvalue = I2C1_ON & I2C1_IDLE_CON & I2C1_CLK_HLD &
-                   I2C1_IPMI_DIS & I2C1_7BIT_ADD & I2C1_SLW_DIS &
-                   I2C1_SM_DIS & I2C1_GCALL_DIS & I2C1_STR_DIS &
-                   I2C1_NACK & I2C1_ACK_DIS & I2C1_RCV_DIS &
-                   I2C1_STOP_DIS & I2C1_RESTART_DIS & I2C1_START_DIS;
-    I2C1BRGvalue = 363; // Fcy(1/Fscl - 1/1111111)-1
-    OpenI2C1(I2C1CONvalue, I2C1BRGvalue);
-    IdleI2C1();
-    //END I2C SETUP
+	radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
+	radioSetSrcAddr(network_src_addr);//defined by bootloader
+	radioSetSrcPanID(network_basestation_pan_id);
+	radioSetChannel(network_basestation_channel);
+	//END RADIO SETUP
+
+	//LED_2 = 0;
+	//delay_ms(2000);
+
+	//BEGIN I2C SETUP
+	unsigned int I2C1CONvalue, I2C1BRGvalue;
+	I2C1CONvalue = I2C1_ON & I2C1_IDLE_CON & I2C1_CLK_HLD &
+				   I2C1_IPMI_DIS & I2C1_7BIT_ADD & I2C1_SLW_DIS &
+				   I2C1_SM_DIS & I2C1_GCALL_DIS & I2C1_STR_DIS &
+				   I2C1_NACK & I2C1_ACK_DIS & I2C1_RCV_DIS &
+				   I2C1_STOP_DIS & I2C1_RESTART_DIS & I2C1_START_DIS;
+	I2C1BRGvalue = 363; // Fcy(1/Fscl - 1/1111111)-1
+	OpenI2C1(I2C1CONvalue, I2C1BRGvalue);
+	IdleI2C1();
+	//END I2C SETUP
 
 
-    //BEGIN ADC SETUP
-    AD1CON1bits.FORM = 0b00;    //integer (0000 00dd dddd dddd) format output
-    AD1CON1bits.ADON = 0;       //disable
-    AD1CON1bits.SSRC = 0b011;   //Sample clock source based on PWM
-    AD1CON1bits.ASAM = 0;       //Auto sampling off
-    AD1CON1bits.SIMSAM = 0;     //Do not sample channels simultaneously
-    AD1CON1bits.ADSIDL = 0;     //continue in idle mode
-    AD1CON1bits.AD12B = 0;      //10 bit mode
+	//BEGIN ADC SETUP
+	AD1CON1bits.FORM = 0b00;    //integer (0000 00dd dddd dddd) format output
+	AD1CON1bits.ADON = 0;       //disable
+	AD1CON1bits.SSRC = 0b011;   //Sample clock source based on PWM
+	AD1CON1bits.ASAM = 0;       //Auto sampling off
+	AD1CON1bits.SIMSAM = 0;     //Do not sample channels simultaneously
+	AD1CON1bits.ADSIDL = 0;     //continue in idle mode
+	AD1CON1bits.AD12B = 0;      //10 bit mode
 
-    AD1CON2bits.VCFG = 0b000;   //Vdd is pos. ref and Vss is neg. ref.
-    AD1CON2bits.CSCNA = 0;      //Do not scan inputs
-    AD1CON2bits.CHPS = 0b00;    //Convert channels 0 and 1
-    AD1CON2bits.SMPI = 0b0000;  //Interrupt after 2 conversions (depends on CHPS and SIMSAM)
+	AD1CON2bits.VCFG = 0b000;   //Vdd is pos. ref and Vss is neg. ref.
+	AD1CON2bits.CSCNA = 0;      //Do not scan inputs
+	AD1CON2bits.CHPS = 0b00;    //Convert channels 0 and 1
+	AD1CON2bits.SMPI = 0b0000;  //Interrupt after 2 conversions (depends on CHPS and SIMSAM)
 
-    AD1CON3bits.ADRC = 0;       //Derive conversion clock from system clock
-    AD1CON3bits.ADCS = 0b00000010; // Each TAD is 3 Tcy
+	AD1CON3bits.ADRC = 0;       //Derive conversion clock from system clock
+	AD1CON3bits.ADCS = 0b00000010; // Each TAD is 3 Tcy
 
-    AD1PCFGL = 0xFFF0;          //Enable AN0 - AN3 as analog inputs
+	AD1PCFGL = 0xFFF0;          //Enable AN0 - AN3 as analog inputs
 
-    AD1CHS0bits.CH0SA = 0b00000;      //Select AN0 for CH0 +ve input
-    AD1CHS0bits.CH0NA = 0b00000;      //Select Vref- for CH0 -ve input
+	AD1CHS0bits.CH0SA = 0b00000;      //Select AN0 for CH0 +ve input
+	AD1CHS0bits.CH0NA = 0b00000;      //Select Vref- for CH0 -ve input
 
-    AD1CON1bits.ADON = 1;       //enable
-    //END ADC SETUP
+	AD1CON1bits.ADON = 1;       //enable
+	//END ADC SETUP
 
-    mcSetup();
-    gyroSetup();
-    xlSetup();
-    dfmemSetup();
-    sclockSetup();
-    timer1Setup();
-    timer2Setup();
-    timer6Setup();
-    cmdSetup();
-    attSetup(1.0/TIMER1_FCY);
-    char j;
+	mcSetup();
+	gyroSetup();
+	xlSetup();
+	dfmemSetup();
+	sclockSetup();
+	timer1Setup();
+	timer2Setup();
+	timer6Setup();
+	timer5Setup();
+	cmdSetup();
 
-    for(j=0; j<6; j++){
-        LED_1 = ~LED_1;
-        delay_ms(100);
-        LED_2 = ~LED_2;
-        delay_ms(100);
-        LED_3 = ~LED_3;
-        delay_ms(100);
-    }
+	LED_2 = 1;
+
+	pidObj pctrl;
+
+	pidObj *pctrl_ptr = &pctrl;
+
+	pidInitPIDObj(pctrl_ptr, PID_KP, PID_KI, PID_KD, PID_KAW, PID_KFF);
+
+	pidOnOff(pctrl_ptr,'1');
+
+	attSetup(1.0/TIMER1_FCY);
+	char j;
+
+	for(j=0; j<6; j++){
+		LED_1 = ~LED_1;
+		delay_ms(100);
+		LED_2 = ~LED_2;
+		delay_ms(100);
+		LED_3 = ~LED_3;
+		delay_ms(100);
+	}
 	
-    wiiSetupBasic();
+	wiiSetupBasic();
 	
-    LED_1 = 1;
-    LED_2 = 1;
-    LED_3 = 1;
+	//LED_1 = 1;
+	LED_2 = 1;
+	//LED_3 = 1;
 
-    char frame[5];
+	char frame[5];
 
-    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
-    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
-    send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
-    //radioDeleteQueues();
-    while(1){
-        cmdHandleRadioRxBuffer();
-        radioProcess();
-    }
-    return 0;
+	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
+	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
+	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
+	//radioDeleteQueues();
+
+	while(1){
+		cmdHandleRadioRxBuffer();
+		radioProcess();
+
+		if(pUpdate){
+			pid_feedback = getFeedback();
+			pidUpdate(pctrl_ptr,pid_feedback);
+			dCycle = pctrl.output;
+			pidSetInput(pctrl_ptr,pidInput);
+			mcSetDutyCycle(1,dCycle);
+		}
+	}
+	return 0;
 }
 
