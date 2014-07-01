@@ -145,7 +145,7 @@ int main ( void )
 	unsigned int network_basestation_pan_id = get_pan_id();
 	unsigned int network_basestation_addr = get_basestation_addr();
 
-	pidInput = 0;//assume robot is stationary and should remain so until told to go//todo, make a speed controller. Something has to set this.
+	int pid_input = 0;//assume robot is stationary and should remain so until told to go//todo, make a speed controller. Something has to set this.
 	int pid_feedback = 0;
 	int dCycle;
 
@@ -264,7 +264,7 @@ int main ( void )
 			pid_feedback = getFeedback();
 			pidUpdate(pctrl_ptr,pid_feedback);
 			dCycle = pctrl.output;
-			pidSetInput(pctrl_ptr,pidInput);
+			pidSetInput(pctrl_ptr,pid_input);
 			mcSetDutyCycle(1,dCycle);
 		}
 	}
