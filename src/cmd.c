@@ -110,6 +110,7 @@ static void cmdReset(unsigned char status, unsigned char length, unsigned char *
 static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
 //Delete these once trackable management code is working
@@ -154,6 +155,7 @@ void cmdSetup(void)
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_SET_INPUT]= &cmdSetInput;
+    cmd_func[CMD_HALL_ENCODER] = &cmdHallEncoder;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -164,6 +166,10 @@ static void cmdSetInput(unsigned char status, unsigned char length, unsigned cha
     MD_LED_2 = 1;
 }
 
+static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
+{
+    send(status, HALL_ENCODER_LEN, hallReadAngleMag(), CMD_HALL_ENCODER,last_addr);
+}
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
 	//Added on frame for purpose of test_sma (to take different channel other than 0

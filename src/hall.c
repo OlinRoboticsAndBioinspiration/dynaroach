@@ -1,18 +1,26 @@
 #include "utils.h" 
 #include "i2c.h"
 #include "hall.h"
+#include <string.h>
 
 #define HALL_ADDR_RD             0x81    
 #define HALL_ADDR_WR             0x80    // 0x40 <<1
-#define HALL_ANGLE_HIGH_WIDTH    8
-#define HALL_MAG_HIGH_WIDTH      8
+#define HALL_ANG_WIDTH           2
+#define HALL_MAG_WIDTH           2
 #define HALL_SETUP_DELAY         100     //(Us)
 #define HALL_DATA_WAIT           500
-
+#define REG_MAG_H                (0xFC)
+#define REG_MAG_L                (0xFD)
+#define REG_ANGLE_H              (0xFE)
+#define REG_ANGLE_L              (0xFF)
 #define hallReadString(length,data,delay) MastergetsI2C2(length, data, delay)
 
-static unsigned char angle_high_8bits[HALL_ANGLE_HIGH_WIDTH+1];
-static unsigned char hallReadMag_high_8bits[HALL_MAG_HIGH_WIDTH+1];
+static unsigned char hallAng[2];
+static unsigned char hallMag[2];
+
+static union halldata { 
+        unsigned char chr_data[HALL_ANG_WIDTH+HALL_MAG_WIDTH];
+        } Halldata;
 
 static void hallWrite(unsigned char subaddr, unsigned char data);
 static void hallSendByte(unsigned char byte);
@@ -36,29 +44,57 @@ void hallSetupZeroPos(void) {
     hallReadString(14,hallAngleData,);
 }*/
 
-unsigned char* hallReadAngle_high_8bits(void) {
+unsigned char* hallReadAngle(void) {
+
     hallStartTx();
     hallSendByte(HALL_ADDR_WR);
     hallSendByte(0xFE);
+    //hallSendByte(0xFF);
     hallEndTx();
     hallStartTx();
     hallSendByte(HALL_ADDR_RD);
-    hallReadString(9, angle_high_8bits, HALL_DATA_WAIT);
-    hallEndTx();   
-    return angle_high_8bits + 1; 
+    hallReadString(2, hallAng, HALL_DATA_WAIT); //Last Ack Byte
+    hallEndTx(); 
+    return hallAng; 
 }
 
-unsigned char* hallReadMagData(void) {
+unsigned char* hallReadMag(void) {
+
     hallStartTx();
     hallSendByte(HALL_ADDR_WR);
     hallSendByte(0xFC);
     hallEndTx();
     hallStartTx();
     hallSendByte(HALL_ADDR_RD);
-    hallReadString(9, hallReadMag_high_8bits, HALL_DATA_WAIT);
+    hallReadString(2, hallMag, HALL_DATA_WAIT);
     hallEndTx();   
-    return hallReadMag_high_8bits + 1; 
+    return hallMag; 
 }
+unsigned char * hallReadAngleMag(void) {
+    unsigned char hall_data[4];
+
+    hallStartTx();
+    hallSendByte(HALL_ADDR_WR);
+    hallSendByte(0xFC);
+    hallEndTx();
+    hallStartTx();
+    hallSendByte(HALL_ADDR_RD);
+    hallReadString(4,hall_data, HALL_DATA_WAIT);
+    hallEndTx();   
+
+    Halldata.chr_data[0] = hall_data[0];
+    Halldata.chr_data[1] = hall_data[1]<<2;
+    Halldata.chr_data[2] = hall_data[2];
+    Halldata.chr_data[3] = hall_data[3]<<2;
+    return Halldata.chr_data; 
+}
+
+void hallDumpData(unsigned char* buffer) {
+
+    memcpy(buffer, Halldata.chr_data + 2, 4);
+}
+
+
 
 static void hallWrite( unsigned char subaddr, unsigned char data){
     hallStartTx();

@@ -48,12 +48,13 @@
 #define CMD_TEST_SWEEP              0x0C
 #define CMD_GET_BACK_EMF			0x0D
 #define CMD_WII_DUMP				0x0E//Todo: move these.  They really aren't for testing.
-#define CMD_WII_OBS					0x0F
+#define CMD_HALL_ENCODER			0x0F
 
 #define TEST_PACKET_INTERVAL_MS 1000
 #define NUM_TEST_PACKETS        1
 #define IMU_DATA_LEN            6
 #define GYRO_CALIB_PARAM_LEN    12
+#define HALL_ENCODER_LEN		4
 #define MEM_CONFIG_PAGE         0x100
 #define MEM_START_PAGE          0x200
 

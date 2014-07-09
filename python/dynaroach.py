@@ -27,7 +27,7 @@ from matplotlib import pyplot as plt
 DEFAULT_BAUD_RATE = 230400
 
 #DEFAULT_DEST_ADDR = '\x00\x15'
-DEFAULT_DEST_ADDR = '\x00\x11'
+DEFAULT_DEST_ADDR = '\x00\x16'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -110,6 +110,7 @@ class DynaRoach(object):
 		self.gyro_res = [(0,0,0),(0,0,0)]
 		self.bemf = 0
 
+		self.hallenc_res = [(0,0)]
 		self.dflash_string = ""
 		self.vbatt = 0
 		self.dfmem_page_size = DFMEM_PAGE_SIZES[dest_addr]
@@ -135,6 +136,8 @@ class DynaRoach(object):
 			self.acc_res = unpack('<3h', data)
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
+		elif typeID == cmd.HALL_ENCODER:
+			self.hallenc_res = unpack('<2h', data)
 		elif typeID == cmd.TEST_DFLASH:
 			#print ''+''.join(data)
 			self.dflash_string= self.dflash_string+''.join(data)
@@ -287,6 +290,11 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.GET_GYRO_CALIB_PARAM, [])
 		self.gyro_offsets = None
 
+	def hall_enc(self):
+		for i in range(0,2):
+			self.hall_enc = None
+			self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+
 	def test_gyro(self):
 		#sensitivity scale of gyro is 14.375
 		'''
@@ -302,7 +310,6 @@ class DynaRoach(object):
 			time.sleep(12)
 			print("Testing gyroscope...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_GYRO, [])
-
 			time.sleep(0.3)
 			#print self.gyro_res
 			assert (self.gyro_res is not None), "No packet received. Check the Radio."
