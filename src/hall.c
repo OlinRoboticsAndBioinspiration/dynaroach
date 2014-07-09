@@ -4,14 +4,14 @@
 
 #define HALL_ADDR_RD             0x43    
 #define HALL_ADDR_WR             0x42    // 0x15 << 1 
-#define HALL_ANGLE_WIDTH         16
-#define HALL_MAG_WIDTH           16
+#define HALL_ANGLE_HIGH_WIDTH    8
+#define HALL_MAG__HIGHWIDTH      8
 #define HALL_SETUP_DELAY         100     //(Us)
 
 #define hallReadString(a,b,c) MastergetsI2C2(a,b,c)
 
-static unsigned char hallAngleData[HALL_ANGLE_WIDTH+1];
-static unsigned char hallAngleData[HALL_ANGLE_WIDTH+1];
+static unsigned char hallReadAngle_high_8bits[HALL_ANGLE_HIGH_WIDTH+1];
+static unsigned char hallReadMag_high_8bits[HALL_MAG_HIGH_WIDTH+1];
 
 static void hallWrite(unsigned char subaddr, unsigned char data);
 static void hallSendByte(unsigned char byte );
@@ -42,7 +42,7 @@ unsigned char* hallReadAngle_high_8bits(void) {
     wiiEndTx();
     hallStartTx();
     hallSendByte(HALL_ADDR_RD);
-    hallReadString(15, hallAngleData, HALL_DATA_WAIT);
+    hallReadString(9, hallAngleData, HALL_DATA_WAIT);
     hallEndTx();   
     return hallAngle_high_8bits + 1; 
 }
@@ -54,9 +54,9 @@ unsigned char* hallReadMagData(void) {
     wiiEndTx();
     hallStartTx();
     hallSendByte(HALL_ADDR_RD);
-    hallReadString(15, hallMagData, HALL_DATA_WAIT);
+    hallReadString(9, hallReadMag_high_8bits, HALL_DATA_WAIT);
     hallEndTx();   
-    return hallAngleData + 1; 
+    return hallReadMag_high_8bits + 1; 
 }
 
 static void hallWrite( unsigned char subaddr, unsigned char data ){
