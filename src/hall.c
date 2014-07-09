@@ -2,16 +2,16 @@
 #include "i2c.h"
 #include "hall.h"
 
-#define HALL_ADDR_RD             0x43    
-#define HALL_ADDR_WR             0x42    // 0x15 << 1 
+#define HALL_ADDR_RD             0x81    
+#define HALL_ADDR_WR             0x80    // 0x40 <<1
 #define HALL_ANGLE_HIGH_WIDTH    8
 #define HALL_MAG__HIGHWIDTH      8
 #define HALL_SETUP_DELAY         100     //(Us)
 
 #define hallReadString(a,b,c) MastergetsI2C2(a,b,c)
 
-static unsigned char hallReadAngle_high_8bits[HALL_ANGLE_HIGH_WIDTH+1];
-static unsigned char hallReadMag_high_8bits[HALL_MAG_HIGH_WIDTH+1];
+static unsigned char hallAngleHigh8[HALL_ANGLE_HIGH_WIDTH+1];
+static unsigned char hallMagHigh8[HALL_MAG_HIGH_WIDTH+1];
 
 static void hallWrite(unsigned char subaddr, unsigned char data);
 static void hallSendByte(unsigned char byte );
