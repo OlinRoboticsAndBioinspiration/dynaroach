@@ -26,8 +26,8 @@ from matplotlib import pyplot as plt
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x15'
 #DEFAULT_DEST_ADDR = '\x00\x15'
+DEFAULT_DEST_ADDR = '\x00\x11'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -75,7 +75,7 @@ BATT_BASE = 785
 BATT_RANGE = 15
 
 PROCESS_COV = .2 #this is just a placeholder until we work out the actual error!
-MEAS_COV = .2 #see above
+MEAS_COV = .5 #see above
 STATE_TRAN = 1 #assuming that the leader is moving forward
 
 class DynaRoach(object):
@@ -154,6 +154,7 @@ class DynaRoach(object):
 			print(self.gyro_offsets)
 		elif typeID == cmd.GET_BACK_EMF:
 			self.bemf=(unpack('H',data)[0])
+			print self.bemf
 		elif typeID == cmd.WII_DUMP:
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
@@ -177,13 +178,15 @@ class DynaRoach(object):
 			print("No blobs found.")
 			return #do something else here- start the "no blobs" routine
 
-		prior_pos = self.dot_pos
-		self.dot_pos = self.dot_pos*STATE_TRAN#really only here if we ever add a transition- maybe size?
-		self.error = self.error + PROCESS_COV
+		for i in range(0,1000):
+			prior_pos = self.dot_pos
+			self.dot_pos = self.dot_pos*STATE_TRAN#really only here if we ever add a transition- maybe size?
+			self.error = self.error + PROCESS_COV
 
-		m_gain = self.error/(self.error + MEAS_COV)
-		self.dot_pos = self.dot_pos + m_gain*(x_meas - self.dot_pos)
-		self.error = (1-m_gain)*self.error
+			m_gain = self.error/(self.error + MEAS_COV)
+			self.dot_pos = self.dot_pos + m_gain*(x_meas - self.dot_pos)
+			self.error = (1-m_gain)*self.error
+			res[i] = self.dot_pos
 
 		#error checking
 		if prior_pos < self.dot_pos:
@@ -349,31 +352,49 @@ class DynaRoach(object):
 		assert(self.dflash_string == "You must be here to fix the cable.Lord. You can imagine where it goes from here.He fixes the cable?Don't be fatuous, Jeffrey."),"Test Failed."
 		print "Dflash is fine." 
 
+	def motor_dcycle_to_bemf(self):
+		vals = [0]*50
+		for i in range(0, len(vals)):
+			c = (((float(i)+1))/100)*2
+			self.test_motor(duty_cycle = c)
+			print c
+			vals[i] = self.bemf
+			time.sleep(5)
+
+		np.savetxt("bemf_vals",vals)
+
+		plt.plot(vals)
+		plt.show()
+
+
 	def test_motor(self,channel_num = 1, duty_cycle = .15):#decimal mostly to keep consistency with setMotorConfig
 		'''
-		Turn on a motor with a duty cycle of 15\% in order to check that the backEMF is within an acceptable range,
+		Turn on a motor with a duty cycle of 15% in order to check that the backEMF is within an acceptable range,
 		as well as a visual check to see that the motor is on.
 		'''
 		data = ''.join(chr(0) for i in range(2))
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
 
-		print("Testing motor. Place the motor on a flat surface and hold it down.")
+		#print("Testing motor. Place the motor on a flat surface and hold it down.")
 
-		for i in range(0,2):
+		for i in range(0,1):
 
 			cmd_data = channel+chr(int(duty_cycle*100))
 			self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_data)
-			time.sleep(3)
+			time.sleep(5)
 			self.radio.send(cmd.STATUS_UNUSED,cmd.GET_BACK_EMF,data)
 			time.sleep(1)
 			self.radio.send(cmd.STATUS_UNUSED,cmd.SET_MOTOR,cmd_stop)
 
-			if channel_num == 1:
-				assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
-				assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
+			#print self.bemf
 
-		print("Test passed.")
+		# 	if channel_num == 1:
+		# 		assert(self.bemf <= MOTOR_BASE[i]-MOTOR_RANGE), "Test failed, motor back EMF too high."
+		# 		assert(self.bemf >= MOTOR_BASE[i]+MOTOR_RANGE),"Test failed, motor back EMF too low."
+
+		# print("Test passed.")
+
 
 
 
@@ -468,7 +489,7 @@ class DynaRoach(object):
 		mw.resize(1024,1024)
 		view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
 		mw.setCentralWidget(view)
-		mw.show()
+		#mw.show()
 		mw.setWindowTitle('WiiData')
 		box = view.addPlot()
 		wii= pg.ScatterPlotItem(size=10, brush=pg.mkBrush(255, 255, 255, 120)) #, clear= False)
@@ -484,7 +505,7 @@ class DynaRoach(object):
 		sclx=1
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
-		while(1):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
+		while(self.num_obs %100):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
 			print('capture'+str(i))
 			for j in range(4):
 				ind = 3*j
@@ -496,16 +517,15 @@ class DynaRoach(object):
 					#print('blob'+' '+str(j+1)+' '+'not found')
 					b[j][2]=0
 				else:
-					self.dot_pos= b[:,0]
-					prior_pos = self.dot_pos
-					self.dot_pos = self.dot_pos *STATE_TRAN
-					self.error = self.error + PROCESS_COV
-					m_gain = self.error/(self.error + MEAS_COV)
-					self.dot_pos = self.dot_pos + m_gain*(b[:,0]- self.dot_pos)
-					self.error = (1-m_gain)*self.error
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
 			#print(sread)
-			print(b)
+
+			self.dot_pos = self.dot_pos * STATE_TRAN
+			self.error = self.error + PROCESS_COV
+			m_gain = self.error/(self.error + MEAS_COV)
+			self.dot_pos = self.dot_pos + m_gain*(b[0,0]- self.dot_pos)
+			self.error = (1-m_gain)*self.error
+
 			wii.addPoints(x=b[:,0],y=b[:,1],size=b[:,2]*2,brush='b') # pen='w', brush='b'
 			wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
 			box.addItem(wii)

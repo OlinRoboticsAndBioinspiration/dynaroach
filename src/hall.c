@@ -1,20 +1,21 @@
-#include "utils.h"
+#include "utils.h" 
 #include "i2c.h"
 #include "hall.h"
 
 #define HALL_ADDR_RD             0x81    
 #define HALL_ADDR_WR             0x80    // 0x40 <<1
 #define HALL_ANGLE_HIGH_WIDTH    8
-#define HALL_MAG__HIGHWIDTH      8
+#define HALL_MAG_HIGH_WIDTH      8
 #define HALL_SETUP_DELAY         100     //(Us)
+#define HALL_DATA_WAIT           500
 
-#define hallReadString(a,b,c) MastergetsI2C2(a,b,c)
+#define hallReadString(length,data,delay) MastergetsI2C2(length, data, delay)
 
-static unsigned char hallAngleHigh8[HALL_ANGLE_HIGH_WIDTH+1];
-static unsigned char hallMagHigh8[HALL_MAG_HIGH_WIDTH+1];
+static unsigned char angle_high_8bits[HALL_ANGLE_HIGH_WIDTH+1];
+static unsigned char hallReadMag_high_8bits[HALL_MAG_HIGH_WIDTH+1];
 
 static void hallWrite(unsigned char subaddr, unsigned char data);
-static void hallSendByte(unsigned char byte );
+static void hallSendByte(unsigned char byte);
 static void hallStartTx(void);
 static void hallEndTx(void);
 static void hallSetupPeripheral(void);
@@ -39,19 +40,19 @@ unsigned char* hallReadAngle_high_8bits(void) {
     hallStartTx();
     hallSendByte(HALL_ADDR_WR);
     hallSendByte(0xFE);
-    wiiEndTx();
+    hallEndTx();
     hallStartTx();
     hallSendByte(HALL_ADDR_RD);
-    hallReadString(9, hallAngleData, HALL_DATA_WAIT);
+    hallReadString(9, angle_high_8bits, HALL_DATA_WAIT);
     hallEndTx();   
-    return hallAngle_high_8bits + 1; 
+    return angle_high_8bits + 1; 
 }
 
 unsigned char* hallReadMagData(void) {
     hallStartTx();
     hallSendByte(HALL_ADDR_WR);
     hallSendByte(0xFC);
-    wiiEndTx();
+    hallEndTx();
     hallStartTx();
     hallSendByte(HALL_ADDR_RD);
     hallReadString(9, hallReadMag_high_8bits, HALL_DATA_WAIT);
@@ -59,12 +60,12 @@ unsigned char* hallReadMagData(void) {
     return hallReadMag_high_8bits + 1; 
 }
 
-static void hallWrite( unsigned char subaddr, unsigned char data ){
-    wiiStartTx();
-    wiiSendByte(WII_ADDR_WR);
-    wiiSendByte(subaddr);
-    wiiSendByte(data);
-    wiiEndTx();
+static void hallWrite( unsigned char subaddr, unsigned char data){
+    hallStartTx();
+    hallSendByte(HALL_ADDR_WR);
+    hallSendByte(subaddr);
+    hallSendByte(data);
+    hallEndTx();
 }
 
 static void hallSendByte( unsigned char byte ){
@@ -77,7 +78,7 @@ static void hallStartTx(void){
     StartI2C2();
     while(I2C2CONbits.SEN);
 }
-static void hallEndTx (void){
+static void hallEndTx(void){
     StopI2C2();
     while(I2C2CONbits.PEN);
 }

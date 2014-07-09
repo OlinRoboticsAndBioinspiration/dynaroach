@@ -129,7 +129,7 @@ static int getFeedback(void)
 
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void)
 {
-    pUpdate = !pUpdate;
+    pUpdate = 1;
     LED_3 = ~LED_3;
     _T5IF = 0;
 }
@@ -145,7 +145,7 @@ int main ( void )
 	unsigned int network_basestation_pan_id = get_pan_id();
 	unsigned int network_basestation_addr = get_basestation_addr();
 
-	int pid_input = 0;//assume robot is stationary and should remain so until told to go//todo, make a speed controller. Something has to set this.
+	pid_input = 0;//assume robot is stationary and should remain so until told to go//todo, make a speed controller. Something has to set this.
 	int pid_feedback = 0;
 	int dCycle;
 
@@ -221,8 +221,6 @@ int main ( void )
 	timer5Setup();
 	cmdSetup();
 
-	LED_2 = 1;
-
 	pidObj pctrl;
 
 	pidObj *pctrl_ptr = &pctrl;
@@ -243,7 +241,7 @@ int main ( void )
 		delay_ms(100);
 	}
 	
-	wiiSetupBasic();
+	//wiiSetupBasic();
 	
 	//LED_1 = 1;
 	LED_2 = 1;
@@ -256,6 +254,15 @@ int main ( void )
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	//radioDeleteQueues();
 
+	LED_1 = 1;
+	LED_3 = 1;
+
+	pidUpdate(pctrl_ptr,0);
+	pidSetInput(pctrl_ptr,0);
+
+	uByte2 out;
+	char f[2];
+
 	while(1){
 		cmdHandleRadioRxBuffer();
 		radioProcess();
@@ -263,9 +270,14 @@ int main ( void )
 		if(pUpdate){
 			pid_feedback = getFeedback();
 			pidUpdate(pctrl_ptr,pid_feedback);
-			dCycle = pctrl.output;
 			pidSetInput(pctrl_ptr,pid_input);
-			mcSetDutyCycle(1,dCycle);
+			dCycle = pctrl.output;
+			out.sval = dCycle;
+			f[0] = out.cval[0];
+			f[1] = out.cval[1];
+			//send(STATUS_UNUSED,2,f,CMD_GET_BACK_EMF, network_basestation_addr);
+			//mcSetDutyCycle(1,dCycle/100);
+			pUpdate = 0;
 		}
 	}
 	return 0;

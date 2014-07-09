@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include "hall.h"
 
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
 //#define ROBOT 0
@@ -28,6 +29,7 @@
 #define SRC_ADDR_LOC        0x400 
 
 volatile unsigned int last_addr;
+int pid_input = 0;
 
 static union {
     struct {
@@ -107,6 +109,7 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
 //Delete these once trackable management code is working
@@ -150,8 +153,15 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
+    cmd_func[CMD_SET_INPUT]= &cmdSetInput;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
+}
+
+static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame)
+{
+    pid_input = frame[0];
+    MD_LED_2 = 1;
 }
 
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
