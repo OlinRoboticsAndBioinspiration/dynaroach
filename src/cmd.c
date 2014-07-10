@@ -20,7 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-#include "hall.h"
+#include "ams-enc.h"
+//#include "hall.h"
 
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
 //#define ROBOT 0
@@ -167,8 +168,17 @@ static void cmdSetInput(unsigned char status, unsigned char length, unsigned cha
 }
 
 static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
-{
-    send(status, HALL_ENCODER_LEN, hallReadAngleMag(), CMD_HALL_ENCODER,last_addr);
+{ 
+    unsigned char num;
+
+    encGetPos(num);
+    /*unsigned char buffer[4];
+    unsigned char * hall_ptr;
+   
+    MD_LED_1 = ~MD_LED_1;
+    hall_ptr = hallReadMag();
+    delay_ms(100);
+    send(status, HALL_ENCODER_LEN, hall_ptr, CMD_HALL_ENCODER,last_addr);*/
 }
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   

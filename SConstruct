@@ -55,7 +55,8 @@ imageProcLibFiles = [imageProc + "/" + n for n in [
     "mac_packet.c",
     "at86rf231_driver.c",
     "wii.c",
-    "pid.c"]]
+    "pid.c",
+    "ams-enc.c"]]
     
 dynaroachFiles = Glob("src/*.c")
 print(xcCompiler+"support/generic/h/dsp.h")

@@ -54,7 +54,7 @@
 #define NUM_TEST_PACKETS        1
 #define IMU_DATA_LEN            6
 #define GYRO_CALIB_PARAM_LEN    12
-#define HALL_ENCODER_LEN		4
+#define HALL_ENCODER_LEN		2
 #define MEM_CONFIG_PAGE         0x100
 #define MEM_START_PAGE          0x200
 

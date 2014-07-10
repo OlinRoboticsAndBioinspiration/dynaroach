@@ -37,6 +37,7 @@
 #include "pid.h"
 #include "pid_hw.h"
 #include <stdio.h>
+#include "ams-enc.h"
 
 //these need tuning!
 #define PID_KP			.5
@@ -211,7 +212,7 @@ int main ( void )
 	//END ADC SETUP
 
 	mcSetup();
-	gyroSetup();
+	//gyroSetup();
 	xlSetup();
 	dfmemSetup();
 	sclockSetup();
@@ -240,12 +241,14 @@ int main ( void )
 		LED_3 = ~LED_3;
 		delay_ms(100);
 	}
-	
-	//wiiSetupBasic();
-	
-	//LED_1 = 1;
+
+	delay_ms(1000);
 	LED_2 = 1;
-	//LED_3 = 1;
+	delay_ms(1000);
+	encSetup();
+	LED_2 = ~LED_2;
+		//wiiSetupBasic();
+
 
 	char frame[5];
 
@@ -253,9 +256,6 @@ int main ( void )
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	//radioDeleteQueues();
-
-	LED_1 = 1;
-	LED_3 = 1;
 
 	pidUpdate(pctrl_ptr,0);
 	pidSetInput(pctrl_ptr,0);
