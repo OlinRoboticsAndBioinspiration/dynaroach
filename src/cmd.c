@@ -167,18 +167,14 @@ static void cmdSetInput(unsigned char status, unsigned char length, unsigned cha
     MD_LED_2 = 1;
 }
 
-static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
-{ 
-    unsigned char num;
+void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
+{   unsigned char *halldata;
+    LED_2 = ~LED_2;
+    halldata = encGetPos();
+    delay_ms(1000);
+    send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
+    LED_2 = ~LED_2;
 
-    encGetPos(num);
-    /*unsigned char buffer[4];
-    unsigned char * hall_ptr;
-   
-    MD_LED_1 = ~MD_LED_1;
-    hall_ptr = hallReadMag();
-    delay_ms(100);
-    send(status, HALL_ENCODER_LEN, hall_ptr, CMD_HALL_ENCODER,last_addr);*/
 }
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   

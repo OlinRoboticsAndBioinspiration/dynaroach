@@ -110,7 +110,7 @@ class DynaRoach(object):
 		self.gyro_res = [(0,0,0),(0,0,0)]
 		self.bemf = 0
 
-		self.hallenc_res = 0
+		self.hallenc_res = []
 		self.dflash_string = ""
 		self.vbatt = 0
 		self.dfmem_page_size = DFMEM_PAGE_SIZES[dest_addr]
@@ -137,7 +137,7 @@ class DynaRoach(object):
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
-			self.hallenc_res = unpack('<h', data)
+			self.hall_enc = unpack('<h',data)
 		elif typeID == cmd.TEST_DFLASH:
 			#print ''+''.join(data)
 			self.dflash_string= self.dflash_string+''.join(data)
