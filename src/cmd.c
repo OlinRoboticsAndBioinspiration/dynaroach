@@ -168,12 +168,25 @@ static void cmdSetInput(unsigned char status, unsigned char length, unsigned cha
 }
 
 void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
-{   unsigned char *halldata;
+{  //LED just testing purpose
     LED_2 = ~LED_2;
+    unsigned char *halldata;
+    /*unsigned char *addrdata;
+    addrdata = Getaddr();
+    if(addrdata[0]==0b1000000){
+        LED_2 = ~LED_2;
+        delay_ms(1000);
+    }*/
+
     halldata = encGetPos();
-    delay_ms(1000);
+    delay_ms(500);
     send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
+    delay_ms(500);
     LED_2 = ~LED_2;
+    
+    //
+    //send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
+    //LED_2 = ~LED_2;
 
 }
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)

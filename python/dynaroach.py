@@ -138,6 +138,7 @@ class DynaRoach(object):
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
 			self.hall_enc = unpack('<h',data)
+			print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
 			#print ''+''.join(data)
 			self.dflash_string= self.dflash_string+''.join(data)
@@ -293,6 +294,8 @@ class DynaRoach(object):
 	def hall_enc(self):
 		self.hall_enc = None
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+		time.sleep(1)
+
 
 	def test_gyro(self):
 		#sensitivity scale of gyro is 14.375
