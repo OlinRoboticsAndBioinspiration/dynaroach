@@ -249,6 +249,8 @@ int main ( void )
 	LED_2 = ~LED_2;
 		//wiiSetupBasic();
 
+	//set_zero();
+
 
 	char frame[5];
 
@@ -283,3 +285,47 @@ int main ( void )
 	return 0;
 }
 
+void set_zero()
+{
+
+    unsigned char *zero_pos = encGetPos();//get current position- this will be new zero
+
+    //set programming enable
+    i2cStartTx(2);
+    i2cSendByte(2,0x81);
+    i2cSendByte(2,0x03);
+    i2cSendByte(2,0x01);
+    i2cEndTx(2);
+
+    //write zero to correct register
+    i2cStartTx(2);
+    i2cSendByte(2,0x81);
+    i2cSendByte(2,0x16);
+    i2cSendByte(2,zero_pos[0]);
+    i2cSendByte(2,zero_pos[1]);
+    i2cEndTx(2);
+
+    //set burn enable
+    i2cStartTx(2);
+    i2cSendByte(2,0x81);
+    i2cSendByte(2,0x03);
+    i2cSendByte(2,0x08);
+    i2cEndTx(2);
+
+    zero_pos = encGetPos();
+
+    if(zero_pos[0]==0 & zero_pos[1] ==0){
+        LED_2 = ~LED_2;
+    }
+
+    //set verify bit
+    i2cStartTx(2);
+    i2cSendByte(2,0x81);
+    i2cSendByte(2,0x03);
+    i2cSendByte(2,0x40);
+    i2cEndTx(2);
+
+    if(zero_pos[0]==0 & zero_pos[1] ==0){
+        LED_2 = ~LED_2;
+    }
+}

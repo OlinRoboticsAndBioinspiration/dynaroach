@@ -189,6 +189,7 @@ void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *f
     //LED_2 = ~LED_2;
 
 }
+
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
 	//Added on frame for purpose of test_sma (to take different channel other than 0
