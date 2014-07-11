@@ -247,7 +247,7 @@ int main ( void )
 	delay_ms(1000);
 	encSetup();
 	LED_2 = ~LED_2;
-		//wiiSetupBasic();
+	//wiiSetupBasic();
 
 	//set_zero();
 

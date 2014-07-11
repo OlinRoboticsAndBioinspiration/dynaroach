@@ -170,6 +170,7 @@ static void cmdSetInput(unsigned char status, unsigned char length, unsigned cha
 void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
 {  //LED just testing purpose
     LED_2 = ~LED_2;
+    int i;
     unsigned char *halldata;
     /*unsigned char *addrdata;
     addrdata = Getaddr();
@@ -177,12 +178,12 @@ void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *f
         LED_2 = ~LED_2;
         delay_ms(1000);
     }*/
-
-    halldata = encGetPos();
-    delay_ms(500);
+    for (i=0;i<NUM_TEST_PACKETS;i++){
+    halldata = encGetPos(); //encGetFloatPos();
+    delay_ms(1000);
     send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
-    delay_ms(500);
     LED_2 = ~LED_2;
+}
     
     //
     //send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);

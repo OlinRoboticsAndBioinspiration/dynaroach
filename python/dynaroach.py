@@ -294,7 +294,6 @@ class DynaRoach(object):
 	def hallenc(self):
 		self.hall_enc = None
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
-		time.sleep(0.5)
 		#print(self.hall_enc)
 		
 
