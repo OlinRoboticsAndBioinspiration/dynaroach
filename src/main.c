@@ -287,7 +287,6 @@ int main ( void )
 
 void set_zero()
 {
-
     unsigned char *zero_pos = encGetPos();//get current position- this will be new zero
 
     //set programming enable
@@ -314,8 +313,10 @@ void set_zero()
 
     zero_pos = encGetPos();
 
-    if(zero_pos[0]==0 & zero_pos[1] ==0){
-        LED_2 = ~LED_2;
+    int pos;
+    pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+    if(pos == 0){
+    	LED_2 = ~LED_2;
     }
 
     //set verify bit
@@ -325,7 +326,8 @@ void set_zero()
     i2cSendByte(2,0x40);
     i2cEndTx(2);
 
-    if(zero_pos[0]==0 & zero_pos[1] ==0){
-        LED_2 = ~LED_2;
+    pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+    if(pos == 0){
+    	LED_2 = ~LED_2;
     }
 }
