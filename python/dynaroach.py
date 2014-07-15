@@ -295,7 +295,7 @@ class DynaRoach(object):
 		while(1):
 			self.hall_enc = None
 			self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
-			time.sleep(1)
+			time.sleep(0.2)
 			#print(self.hall_enc)
 			MSB= bin(self.hall_enc[0])[2:].zfill(8)
 			LSB= bin(self.hall_enc[1])[2:].zfill(8)
