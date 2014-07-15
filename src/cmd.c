@@ -178,8 +178,8 @@ void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *f
         LED_2 = ~LED_2;
         delay_ms(1000);
     }*/
-    halldata = Getzero()//encGetPos(); //encGetFloatPos();
-    delay_ms(100);
+    halldata = encGetPos();//encGetPos(); //encGetFloatPos();
+    delay_ms(200);
     send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
     LED_2 = ~LED_2;
     

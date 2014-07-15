@@ -26,8 +26,8 @@ from matplotlib import pyplot as plt
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x11'
-#DEFAULT_DEST_ADDR = '\x00\x16'
+#DEFAULT_DEST_ADDR = '\x00\x11'
+DEFAULT_DEST_ADDR = '\x00\x16'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -137,11 +137,8 @@ class DynaRoach(object):
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
-			self.hall_enc = unpack('<h',data)
-			brep = bin(self.hall_enc[0])
-			res = brep[3:10]+brep[12:]
-			angle = int(res,2)*0.0219
-			print(angle)
+			self.hall_enc = unpack('2B',data)
+			#print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
 			#print ''+''.join(data)
 			self.dflash_string= self.dflash_string+''.join(data)
@@ -295,8 +292,32 @@ class DynaRoach(object):
 		self.gyro_offsets = None
 
 	def hallenc(self):
-		self.hall_enc = None
-		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+		while(1):
+			self.hall_enc = None
+			self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+			time.sleep(1)
+			#print(self.hall_enc)
+			MSB= bin(self.hall_enc[0])[2:].zfill(8)
+			LSB= bin(self.hall_enc[1])[2:].zfill(8)
+			#print (MSB)
+			#print(LSB)
+			res= MSB[:8]+LSB[2:8]
+			#print(res)
+			angle = int(res,2) *0.0219
+			print(angle)
+
+		# while(1): 
+		# 	time.sleep(2)
+		# 	print(self.hall_enc)
+		# 	new='{0:16b}'.format(self.hall_enc[0])
+		# 	print('new'+ new)
+		# 	what = bin(self.hall_enc[0])[2:]
+		# 	print(what)
+		# 	brep = bin(self.hall_enc[0])[2:].zfill(16)
+		# 	print(brep)
+		# 	res = brep[:7]+brep[10:]
+		# 	angle = int(res,2)*0.0219
+		# 	print(angle)
 		#print(self.hall_enc)
 		
 
