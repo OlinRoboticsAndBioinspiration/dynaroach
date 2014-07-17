@@ -26,8 +26,8 @@ from matplotlib import pyplot as plt
 
 DEFAULT_BAUD_RATE = 230400
 
-#DEFAULT_DEST_ADDR = '\x00\x11'
-DEFAULT_DEST_ADDR = '\x00\x16'
+DEFAULT_DEST_ADDR = '\x00\x11'
+#DEFAULT_DEST_ADDR = '\x00\x16'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -138,12 +138,14 @@ class DynaRoach(object):
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
 			self.hall_enc = unpack('2B',data)
-			#print(self.hall_enc)
+			print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
 			#print ''+''.join(data)
 			self.dflash_string= self.dflash_string+''.join(data)
 		elif typeID == cmd.TEST_BATT:
 			self.vbatt = unpack('H', data)[0]
+			print(self.vbatt/1000.0)
+			print ("Data")
 		elif typeID == cmd.TX_SAVED_DATA:
 			datum = list(unpack('<L3f3h2HB4H', data))
 			self.state_data.append(datum)

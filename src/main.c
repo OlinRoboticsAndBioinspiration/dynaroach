@@ -46,8 +46,21 @@
 
 #define PID_KFF			0 //system dependent feedforward term. 
 #define PID_KAW			.5 //antiwindup term
+#define PID_DELAY		2//milliseconds
 
 static int pUpdate;
+static unsigned char *pos_data;
+static int current_pos;
+static int deltas[5];
+static int time_counter;
+static int last_pos;
+static int delta;
+static int deltasum;
+static int freq;
+static int i;
+static int pCounter;
+static int sample;
+static float revs;
 
 void initDma0(void)
 {
@@ -108,10 +121,10 @@ static void timer5Setup(void)
 	T5CONbits.TON = 0; // Disable Timer
 	T5CONbits.TCS = 0; // Select internal instruction cycle clock 
 	T5CONbits.TGATE = 0; // Disable Gated Timer mode
-	T5CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
+	T5CONbits.TCKPS = 0b10; // Select 1:256 Prescaler
 	TMR1 = 0x00; // Clear timer register
-	PR1 = 156000; // Load the period value (1125ms)
-	IPC7bits.T5IP = 0x04; //priority
+	PR1 = 1250; // Load the period value (.002 s)
+	IPC7bits.T5IP = 0x06; //priority
 	IFS1bits.T5IF = 0; //Flag =0
 	IEC1bits.T5IE = 1; //Enable interrupt
 	T5CONbits.TON = 1; //Turn the timer on
@@ -130,21 +143,42 @@ static void timer7Setup(void)
 	IEC3bits.T7IE = 1; //Enable interrupt
 	//T7CONbits.TON = 0; //Get called in Hall Function 
 }
-static int getFeedback(void)
-{
-    AD1CHS0bits.CH0SA = 0b00001;      //Select AN1 (back EMF) for sampling
-    AD1CON1bits.SAMP = 1;
-    while(!AD1CON1bits.DONE);
-    AD1CON1bits.SAMP = 0;
-    AD1CON1bits.DONE = 0;
-    unsigned short bemf= ADC1BUF0; 
-	return bemf;//results of conversion... need to get these)
+
+static void getFeedback(void)
+{	//all of this is working with gear measurement, no conversion
+	deltasum = 0;
+    current_pos = (pos_data[0]<<6)+(pos_data[1]&0x3F);
+    delta = current_pos-last_pos;
+    if(delta < 0){
+    	delta = (16384-last_pos)+current_pos;
+    }
+
+    last_pos = current_pos;
+
+    // for(i = 0; i!=4;i++){
+    // 	deltasum = deltasum+deltas[i];
+    // 	deltas[i] = deltas[i+1];
+    // }
+    // deltasum = deltasum + delta;
+
+    revs = delta/16384.0;
+
+    // deltas[4] = delta;
+
+    freq = (revs/(PID_DELAY*500))*1000;//revs/s *1000;
 }
 
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void)
-{
-    pUpdate = 1;
-    LED_3 = ~LED_3;
+{	
+	sample = 1;
+    pCounter = pCounter+1;
+    if (pCounter > 10){
+    	pUpdate = 1;
+    	pCounter = 0;
+    	LED_3 = ~LED_3;
+    }
+    
+    LED_1 = ~LED_1;
     _T5IF = 0;
 }
 
@@ -163,7 +197,9 @@ int main ( void )
 	int pid_feedback = 0;
 	int dCycle;
 
-	int pUpdate = 1;
+	pUpdate = 0;
+	pCounter = 0;
+	sample = 0;
 
 	SetupClock();
 	SwitchClocks();
@@ -225,15 +261,15 @@ int main ( void )
 	//END ADC SETUP
 
 	mcSetup();
-	//gyroSetup();
+	gyroSetup();
 	xlSetup();
 	dfmemSetup();
 	sclockSetup();
 	timer1Setup();
 	timer2Setup();
-	timer6Setup();
 	timer5Setup();
 	timer7Setup();
+
 	cmdSetup();
 
 	pidObj pctrl;
@@ -279,24 +315,40 @@ int main ( void )
 	uByte2 out;
 	char f[2];
 
+	timer5Setup();
 	while(1){
 		cmdHandleRadioRxBuffer();
 		radioProcess();
-
-		if(pUpdate){
-			pid_feedback = getFeedback();
-			pidUpdate(pctrl_ptr,pid_feedback);
-			pidSetInput(pctrl_ptr,pid_input);
-			dCycle = pctrl.output;
-			out.sval = dCycle;
+		//LED_2 = ~LED_2;
+		if(sample == 1){
+			pos_data = encGetPos();
+			sample = 0;
+		}
+		
+		if(pUpdate ==1){
+			getFeedback();
+			out.sval = freq;
 			f[0] = out.cval[0];
-			f[1] = out.cval[1];
-			//send(STATUS_UNUSED,2,f,CMD_GET_BACK_EMF, network_basestation_addr);
-			//mcSetDutyCycle(1,dCycle/100);
+			f[1]= out.cval[1];
+			// pUpdate = 0;
+			send(STATUS_UNUSED, 2, f, CMD_TEST_BATT, network_basestation_addr);
+			//LED_2 = ~LED_2;
 			pUpdate = 0;
+			// pUpdate = 0;
+			//MD_LED_1 = ~MD_LED_1;
+
+			//send(STATUS_UNUSED,2,f,CMD_GET_BACK_EMF,network_basestation_addr);
+			// pidUpdate(pctrl_ptr,pid_feedback);
+			// pidSetInput(pctrl_ptr,pid_input);
+			// dCycle = pctrl.output;
+			// out.sval = dCycle;
+			// f[0] = out.cval[0];
+			// f[1] = out.cval[1];
+			// //send(STATUS_UNUSED,2,f,CMD_GET_BACK_EMF, network_basestation_addr);
+			// //mcSetDutyCycle(1,dCycle/100);
+			//LED_2 = ~LED_2;
 		}
 	}
-	return 0;
 }
 
 void set_zero()
@@ -329,6 +381,7 @@ void set_zero()
 
     int pos;
     pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+
     if(pos == 0){
     	LED_2 = ~LED_2;
     }
@@ -341,6 +394,7 @@ void set_zero()
     i2cEndTx(2);
 
     pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+
     if(pos == 0){
     	LED_2 = ~LED_2;
     }

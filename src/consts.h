@@ -72,6 +72,7 @@
 #define CMD_RESET               0x1A
 #define CMD_ECHO                0x1F
 #define CMD_SET_INPUT 			0x1B
+#define CMD_FREQUENCY			0x1C
 
 #define TIMER1_FCY          250
 
