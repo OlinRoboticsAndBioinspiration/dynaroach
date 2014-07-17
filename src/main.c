@@ -117,6 +117,19 @@ static void timer5Setup(void)
 	T5CONbits.TON = 1; //Turn the timer on
 }
 
+static void timer7Setup(void)
+{
+	T7CONbits.TON = 0; // Disable Timer
+	T7CONbits.TCS = 0; // Select internal instruction cycle clock 
+	T7CONbits.TGATE = 0; // Disable Gated Timer mode
+	T7CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
+	TMR1 = 0x00; // Clear timer register
+	PR1 = 1250; // Load the period value (0.002s=500Hz)
+	IPC12bits.T7IP = 0x04; //priority
+	IFS3bits.T7IF = 0; //Flag =0
+	IEC3bits.T7IE = 1; //Enable interrupt
+	//T7CONbits.TON = 0; //Get called in Hall Function 
+}
 static int getFeedback(void)
 {
     AD1CHS0bits.CH0SA = 0b00001;      //Select AN1 (back EMF) for sampling
@@ -220,6 +233,7 @@ int main ( void )
 	timer2Setup();
 	timer6Setup();
 	timer5Setup();
+	timer7Setup();
 	cmdSetup();
 
 	pidObj pctrl;
