@@ -167,26 +167,28 @@ static void cmdSetInput(unsigned char status, unsigned char length, unsigned cha
     MD_LED_2 = 1;
 }
 
-void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
+static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
 {  //LED just testing purpose
     LED_2 = ~LED_2;
     int i;
-    unsigned char *halldata;
+    //unsigned char *halldata;
+
+    HallRunCalib(200);
+    delay_ms(1000);
+    //halldata= HallGetCalibParam();
     /*unsigned char *addrdata;
     addrdata = Getaddr();
     if(addrdata[0]==0b1000000){
         LED_2 = ~LED_2;
         delay_ms(1000);
     }*/
-    halldata = encGetPos();//encGetPos(); //encGetFloatPos();
-    delay_ms(50);
-    send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
+    //halldata = encGetPos();//encGetPos(); //encGetFloatPos();
+    send(status, 2, HallGetCalibParam(), CMD_HALL_ENCODER, last_addr);
     LED_2 = ~LED_2;
     
     //
     //send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
     //LED_2 = ~LED_2;
-
 }
 
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
