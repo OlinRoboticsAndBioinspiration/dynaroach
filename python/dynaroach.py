@@ -26,8 +26,8 @@ from matplotlib import pyplot as plt
 
 DEFAULT_BAUD_RATE = 230400
 
-DEFAULT_DEST_ADDR = '\x00\x11'
-#DEFAULT_DEST_ADDR = '\x00\x16'
+#DEFAULT_DEST_ADDR = '\x00\x11'
+DEFAULT_DEST_ADDR = '\x00\x18'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -294,19 +294,29 @@ class DynaRoach(object):
 		self.gyro_offsets = None
 
 	def hallenc(self):
-		while(1):
-			self.hall_enc = None
-			self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
-			time.sleep(0.2)
-			#print(self.hall_enc)
-			MSB= bin(self.hall_enc[0])[2:].zfill(8)
-			LSB= bin(self.hall_enc[1])[2:].zfill(8)
-			#print (MSB)
-			#print(LSB)
-			res= MSB[:8]+LSB[2:8]
-			#print(res)
-			angle = int(res,2) *0.0219
-			print(angle)
+
+		data = ''.join(chr(0) for i in range(2))
+		channel = chr(channel_num)
+		cmd_stop = channel + chr(0)
+		cmd_data = channel+chr(int(duty_cycle*100))
+		#print("Testing motor. Place the motor on a flat surface and hold it down.")
+
+		self.hall_enc = None
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,[])
+		time.sleep(1)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+		time.sleep(3)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,
+		time.sleep(0.2)
+		#print(self.hall_enc)
+		MSB= bin(self.hall_enc[0])[2:].zfill(8)
+		LSB= bin(self.hall_enc[1])[2:].zfill(8)
+		#print (MSB)
+		#print(LSB)
+		res= MSB[:8]+LSB[2:8]
+		#print(res)
+		angle = int(res,2) *0.0219
+		print(angle)
 
 		# while(1): 
 		# 	time.sleep(2)
@@ -402,7 +412,7 @@ class DynaRoach(object):
 		plt.show()
 
 
-	def test_motor(self,channel_num = 1, duty_cycle = .15):#decimal mostly to keep consistency with setMotorConfig
+	def test_motor(self,channel_num = 1, duty_cycle = .4):#decimal mostly to keep consistency with setMotorConfig
 		'''
 		Turn on a motor with a duty cycle of 15% in order to check that the backEMF is within an acceptable range,
 		as well as a visual check to see that the motor is on.
