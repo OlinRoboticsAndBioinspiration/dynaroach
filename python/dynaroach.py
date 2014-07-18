@@ -139,7 +139,7 @@ class DynaRoach(object):
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
-			self.hall_enc = unpack('2B',data)
+			self.hall_enc = unpack('f',data)
 		elif typeID == cmd.TEST_DFLASH:
 			self.dflash_string= self.dflash_string+''.join(data)
 		elif typeID == cmd.TEST_BATT:
@@ -308,26 +308,28 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
 		time.sleep(3)
 
-		MSB= bin(self.hall_enc[0])[2:].zfill(8)
-		LSB= bin(self.hall_enc[1])[2:].zfill(8)
-		r1= MSB[:8]+LSB[2:8]
+		#MSB= bin(self.hall_enc[0])[2:].zfill(8)
+		#LSB= bin(self.hall_enc[1])[2:].zfill(8)
+		#r1= MSB[:8]+LSB[2:8]
 
-		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
-		time.sleep(3)
+		#self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+		#time.sleep(3)
 
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(0.2)
 
-		MSB= bin(self.hall_enc[0])[2:].zfill(8)
-		LSB= bin(self.hall_enc[1])[2:].zfill(8)
-		r2= MSB[:8]+LSB[2:8]
+		print(self.hall_enc)
 
-		last_angle = int(r1,2) * HALL_DEGREES_PER_LSB
-		angle = int(r2,2) * HALL_DEGREES_PER_LSB
-		delta = abs(last_angle - angle)
-		revs = delta/360
-		freq = revs/3
-		print(freq)
+		#MSB= bin(self.hall_enc[0])[2:].zfill(8)
+		#LSB= bin(self.hall_enc[1])[2:].zfill(8)
+		#r2= MSB[:8]+LSB[2:8]
+
+		# last_angle = int(r1,2) * HALL_DEGREES_PER_LSB
+		# angle = int(r2,2) * HALL_DEGREES_PER_LSB
+		# delta = abs(last_angle - angle)
+		# revs = delta/360
+		# freq = revs/3
+		# print(freq)
 
 	def test_hallenc(self):
 			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
