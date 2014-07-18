@@ -164,13 +164,20 @@ class DynaRoach(object):
 		elif typeID == cmd.WII_DUMP:
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
+		elif typeID ==cmd.TX_HALLENC:
+			datum = list(unpack('2B', data))
+			self.state_data.append(datum)
+			print(datum)
+			self.data_cnt += 1
+			if self.data_cnt % 100 == 0:
+				print self.data_cnt, "/", self.last_sample_count
 		# elif typeID == cmd.WII_DATUM:
 		# 	self.measurement = [bin(x)[2:] for x in unpack('12B,data')[:3]]
 		# 	self.kalman()
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
-
 			  datum = list(unpack('<L3f3h2HB4H', data))
+
 			  # print datum[6:]
 
 	def kalman(self):
@@ -293,20 +300,20 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.GET_GYRO_CALIB_PARAM, [])
 		self.gyro_offsets = None
 
-	def hallenc(self):
-
+	def hallenc(self, channel_num=1, duty_cycle=0.2):
+		self.hall_enc = None
 		data = ''.join(chr(0) for i in range(2))
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
 		cmd_data = channel+chr(int(duty_cycle*100))
 		#print("Testing motor. Place the motor on a flat surface and hold it down.")
-		self.hall_enc = None
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
-		time.sleep(1)
+		
+		#self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
+		#time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
-		time.sleep(3)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
-		time.sleep(0.2)
+		time.sleep(1)
+		#self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
+		#time.sleep(0.2)
 		#print(self.hall_enc)
 		MSB= bin(self.hall_enc[0])[2:].zfill(8)
 		LSB= bin(self.hall_enc[1])[2:].zfill(8)
@@ -317,6 +324,26 @@ class DynaRoach(object):
 		angle = int(res,2) *0.0219
 		print(angle)
 
+	def test_hallenc(self):
+			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
+
+			time.sleep(5)
+
+			if(self.last_sample_count == 0):
+				self.get_sample_count()
+				time.sleep(0.5)
+
+			if(self.last_sample_count == 0):
+				print("There is no previously saved data.")
+				return
+			
+			else:
+				self.data_cnt = 0
+				start_page = 0x200
+				print("Transmitting saved data...")
+				self.state_data = []
+				self.data_cnt = 0
+				self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 2))
 		# while(1): 
 		# 	time.sleep(2)
 		# 	print(self.hall_enc)
