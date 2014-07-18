@@ -29,5 +29,5 @@ MOTOR_CONFIG    = 0x19
 RESET           = 0x1A
 ECHO            = 0x1F
 SET_INPUT		= 0x1B
-
-
+TX_HALLENC		= 0x1D
+CONFIG_ENCODER	= 0x1E
