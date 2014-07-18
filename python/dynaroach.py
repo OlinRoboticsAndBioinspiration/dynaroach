@@ -300,13 +300,12 @@ class DynaRoach(object):
 		cmd_stop = channel + chr(0)
 		cmd_data = channel+chr(int(duty_cycle*100))
 		#print("Testing motor. Place the motor on a flat surface and hold it down.")
-
 		self.hall_enc = None
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,[])
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
 		time.sleep(3)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(0.2)
 		#print(self.hall_enc)
 		MSB= bin(self.hall_enc[0])[2:].zfill(8)
