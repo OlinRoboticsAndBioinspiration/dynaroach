@@ -56,6 +56,7 @@ static int streamMod = 0;
 static int is_data_streaming = 0;
 static int readWiiData = 0;
 static int Wiiinvalid= 0;
+static int samplehall= 0;
 
 unsigned int get_src_addr(void){
     TBLPAG = 0x0;
@@ -86,9 +87,10 @@ void(*cmd_func[MAX_CMD_FUNC_SIZE])(unsigned char, unsigned char, unsigned char*)
 StateTransition* stTable;
 unsigned char st_idx;
 static unsigned long trial_start_time = 0;
-
+static unsigned long hall_start_time = 0;
 static void cmdNop(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdTxSavedData(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdConfigureSma(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdConfigureTrial(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdRunTrial(unsigned char status, unsigned char length, unsigned char *frame);
@@ -112,6 +114,7 @@ static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned c
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame);
+static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
 //Delete these once trackable management code is working
@@ -157,6 +160,8 @@ void cmdSetup(void)
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_SET_INPUT]= &cmdSetInput;
     cmd_func[CMD_HALL_ENCODER] = &cmdHallEncoder;
+    cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
+    cmd_func[CMD_CONFIG_HALLENC] = &ConfigureHallEnc;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -168,29 +173,28 @@ static void cmdSetInput(unsigned char status, unsigned char length, unsigned cha
 }
 
 static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
-{  //LED just testing purpose
+{
     LED_2 = ~LED_2;
     int i;
-    //unsigned char *halldata;
+    unsigned char * halldata;
+    halldata = encGetPos();
+    delay_ms(100);
+    //HallRunCalib(200);
+    //delay_ms(100);
 
-    HallRunCalib(200);
-    delay_ms(1000);
-    //halldata= HallGetCalibParam();
-    /*unsigned char *addrdata;
-    addrdata = Getaddr();
-    if(addrdata[0]==0b1000000){
-        LED_2 = ~LED_2;
-        delay_ms(1000);
-    }*/
-    //halldata = encGetPos();//encGetPos(); //encGetFloatPos();
-    send(status, 2, HallGetCalibParam(), CMD_HALL_ENCODER, last_addr);
+    send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
     LED_2 = ~LED_2;
-    
-    //
-    //send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
-    //LED_2 = ~LED_2;
 }
+static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
 
+	T7CONbits.TON = 1;
+	hall_start_time= sclockGetTicks();
+	MemLoc.index.page = MEM_START_PAGE;
+    MemLoc.index.byte = 0;
+    sample_cnt.sval =0;
+    samplehall=1; //startsampling don't know if we need this
+    //delay_ms(100);
+}
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
 	//Added on frame for purpose of test_sma (to take different channel other than 0
@@ -262,6 +266,60 @@ unsigned int cmdHandleRadioRxBuffer(void)
         radioReturnPacket(packet);
     }
     return;
+}
+
+static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigned char *frame){
+
+	if(ROBOT)
+    {
+        unsigned int start_page = frame[0] + (frame[1] << 8);
+        //unsigned int end_page = frame[2] + (frame[3] << 8);
+        unsigned int num_samples = frame[2] + (frame[3] << 8);
+        unsigned int tx_data_size = frame[4] + (frame[5] << 8);
+        unsigned int i, j;
+
+        MacPacket packet;
+        Payload pld;
+
+   		LED_1 = 0;
+        LED_2 = 1;
+        LED_3 = 0;
+
+        unsigned int read = 0;
+        i = start_page;
+        while(read < num_samples + 100)
+        {
+            j = 0;
+            while (j + tx_data_size <= 264) {
+                packet = radioRequestPacket(tx_data_size);
+                if(packet == NULL)
+                {
+                    continue;
+                }
+                unsigned int network_basestation_pan_id = get_pan_id();
+                unsigned int network_basestation_addr = get_basestation_addr();
+
+                macSetDestPan(packet, network_basestation_pan_id);
+                macSetDestAddr(packet, network_basestation_addr);
+                pld = macGetPayload(packet);
+                dfmemRead(i, j, tx_data_size, payGetData(pld));
+                paySetType(pld, CMD_TX_HALLENC);
+                if(radioEnqueueTxPacket(packet))
+                {
+                    radioProcess();
+                }
+                delay_ms(20);
+                j += tx_data_size;
+                read++;
+            }
+            i++;
+
+            if ((i >> 7) & 0x1) {
+                LED_1 = ~LED_1;
+                LED_2 = ~LED_2;
+            }
+        }
+    }
 }
 
 static void cmdTxSavedData(unsigned char status, unsigned char length, unsigned char *frame)
@@ -973,4 +1031,48 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
   
 }
 
+void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
+{
+	LED_1 = ~LED_1;
+	uByte4 t_ticks;
+	unsigned char kDataLength = 2;
+    unsigned char buffer[kDataLength];
+    static unsigned char buf_idx = 1;
+	StateTransition st;
+    unsigned char* halldata;
+    t_ticks.lval = sclockGetTicks() - hall_start_time;
 
+    if(samplehall==1){
+    	while (st->timestamp < t_ticks.lval)
+    	{ 
+	    	//HallRunCalib(100);
+			halldata = HallGetCalibParam();
+	    	MD_LED_1 = ~MD_LED_1;
+	    	buffer[0] = halldata[0];
+	    	buffer[1] = halldata[1];
+
+	    	strcpy((char *)buffer+sample_cnt.sval*kDataLength, halldata);
+			MemLoc.index.byte += kDataLength;
+			sample_cnt.sval++;
+		
+		if (sample_cnt.sval==50){
+			dfmemWrite (buffer, sizeof(buffer), MemLoc.index.page, MemLoc.index.byte, buf_idx);
+			samplehall =0;
+			T7CONbits.TON = 0;
+
+			//dfmemWriteBuffer(buffer, kDataLength, MemLoc.index.byte, buf_idx);
+			//MemLoc.index.byte += kDataLength;
+			//sample_cnt.sval++;
+			
+			// if(MemLoc.index.byte + kDataLength > 264)
+	  //       {
+	  //           MD_LED_1 = ~MD_LED_1;
+	  //           dfmemWriteBuffer2MemoryNoErase(MemLoc.index.page++, buf_idx);
+	  //           MemLoc.index.byte = 0;
+	  //           buf_idx ^= 0x01;
+	  //       }
+	        }
+	        }
+	}
+		_T7IF = 0;
+	}
