@@ -78,6 +78,8 @@ PROCESS_COV = .2 #this is just a placeholder until we work out the actual error!
 MEAS_COV = .5 #see above
 STATE_TRAN = 1 #assuming that the leader is moving forward
 
+HALL_DEGREES_PER_LSB = 0.0219
+
 class DynaRoach(object):
 	'''Class representing the dynaRoACH robot'''
 
@@ -138,14 +140,10 @@ class DynaRoach(object):
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
 			self.hall_enc = unpack('2B',data)
-			print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
-			#print ''+''.join(data)
 			self.dflash_string= self.dflash_string+''.join(data)
 		elif typeID == cmd.TEST_BATT:
 			self.vbatt = unpack('H', data)[0]
-			print(self.vbatt/1000.0)
-			print ("Data")
 		elif typeID == cmd.TX_SAVED_DATA:
 			datum = list(unpack('<L3f3h2HB4H', data))
 			self.state_data.append(datum)
@@ -171,14 +169,10 @@ class DynaRoach(object):
 			self.data_cnt += 1
 			if self.data_cnt % 100 == 0:
 				print self.data_cnt, "/", self.last_sample_count
-		# elif typeID == cmd.WII_DATUM:
-		# 	self.measurement = [bin(x)[2:] for x in unpack('12B,data')[:3]]
-		# 	self.kalman()
+
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
 			  datum = list(unpack('<L3f3h2HB4H', data))
-
-			  # print datum[6:]
 
 	def kalman(self):
 		for i in range(4):
@@ -301,28 +295,39 @@ class DynaRoach(object):
 		self.gyro_offsets = None
 
 	def hallenc(self, channel_num=1, duty_cycle=0.2):
-		self.hall_enc = None
+
 		data = ''.join(chr(0) for i in range(2))
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
 		cmd_data = channel+chr(int(duty_cycle*100))
-		#print("Testing motor. Place the motor on a flat surface and hold it down.")
-		
-		#self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
-		#time.sleep(1)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+
+		self.hall_enc = None
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		time.sleep(1)
-		#self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
-		#time.sleep(0.2)
-		#print(self.hall_enc)
+
+		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+		time.sleep(3)
+
 		MSB= bin(self.hall_enc[0])[2:].zfill(8)
 		LSB= bin(self.hall_enc[1])[2:].zfill(8)
-		#print (MSB)
-		#print(LSB)
-		res= MSB[:8]+LSB[2:8]
-		#print(res)
-		angle = int(res,2) *0.0219
-		print(angle)
+		r1= MSB[:8]+LSB[2:8]
+
+		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
+		time.sleep(3)
+
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
+		time.sleep(0.2)
+
+		MSB= bin(self.hall_enc[0])[2:].zfill(8)
+		LSB= bin(self.hall_enc[1])[2:].zfill(8)
+		r2= MSB[:8]+LSB[2:8]
+
+		last_angle = int(r1,2) * HALL_DEGREES_PER_LSB
+		angle = int(r2,2) * HALL_DEGREES_PER_LSB
+		delta = abs(last_angle - angle)
+		revs = delta/360
+		freq = revs/3
+		print(freq)
 
 	def test_hallenc(self):
 			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])

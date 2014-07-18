@@ -48,17 +48,13 @@
 #define PID_KAW			.5 //antiwindup term
 #define PID_DELAY		2//milliseconds
 
-static int pUpdate;
 static unsigned char *pos_data;
 static int current_pos;
-static int deltas[5];
 static int time_counter;
 static int last_pos;
 static int delta;
-static int deltasum;
 static int freq;
 static int i;
-static int pCounter;
 static int sample;
 static float revs;
 
@@ -146,37 +142,20 @@ static void timer7Setup(void)
 
 static void getFeedback(void)
 {	//all of this is working with gear measurement, no conversion
-	deltasum = 0;
     current_pos = (pos_data[0]<<6)+(pos_data[1]&0x3F);
-    delta = current_pos-last_pos;
-    if(delta < 0){
-    	delta = (16384-last_pos)+current_pos;
-    }
+    delta = abs(current_pos-last_pos);
+    
 
     last_pos = current_pos;
 
-    // for(i = 0; i!=4;i++){
-    // 	deltasum = deltasum+deltas[i];
-    // 	deltas[i] = deltas[i+1];
-    // }
-    // deltasum = deltasum + delta;
-
     revs = delta/16384.0;
-
-    // deltas[4] = delta;
 
     freq = (revs/(PID_DELAY*500))*1000;//revs/s *1000;
 }
 
-void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void)
+void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void)//for Hall sampling
 {	
 	sample = 1;
-    pCounter = pCounter+1;
-    if (pCounter > 10){
-    	pUpdate = 1;
-    	pCounter = 0;
-    	LED_3 = ~LED_3;
-    }
     
     LED_1 = ~LED_1;
     _T5IF = 0;
@@ -184,9 +163,6 @@ void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void)
 
 int main ( void )
 {
-	//LED_1 = 0;
-	//LED_2 = 0;
-	//LED_3 = 0;
 
 	unsigned int network_src_addr = get_src_addr();
 	unsigned int network_basestation_channel = get_channel();
@@ -209,18 +185,12 @@ int main ( void )
 	spicSetupChannel2();
 	ppoolInit();
 
-	//LED_1=1;
-	//LED_2=1;
-	//LED_3=1;
-
+	//BEGIN RADIO SETUP
 	radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
 	radioSetSrcAddr(network_src_addr);//defined by bootloader
 	radioSetSrcPanID(network_basestation_pan_id);
 	radioSetChannel(network_basestation_channel);
 	//END RADIO SETUP
-
-	//LED_2 = 0;
-	//delay_ms(2000);
 
 	//BEGIN I2C SETUP
 	unsigned int I2C1CONvalue, I2C1BRGvalue;
@@ -295,12 +265,13 @@ int main ( void )
 	delay_ms(1000);
 	LED_2 = 1;
 	delay_ms(1000);
+
 	encSetup();
+
 	LED_2 = ~LED_2;
 	//wiiSetupBasic();
 
 	//set_zero();
-
 
 	char frame[5];
 
@@ -318,35 +289,15 @@ int main ( void )
 	timer5Setup();
 	while(1){
 		cmdHandleRadioRxBuffer();
-		radioProcess();
-		//LED_2 = ~LED_2;
-		if(sample == 1){
+
+		if(sample == 1)
+		{
 			pos_data = encGetPos();
-			sample = 0;
-		}
-		
-		if(pUpdate ==1){
 			getFeedback();
 			out.sval = freq;
 			f[0] = out.cval[0];
 			f[1]= out.cval[1];
-			// pUpdate = 0;
-			send(STATUS_UNUSED, 2, f, CMD_TEST_BATT, network_basestation_addr);
-			//LED_2 = ~LED_2;
-			pUpdate = 0;
-			// pUpdate = 0;
-			//MD_LED_1 = ~MD_LED_1;
-
-			//send(STATUS_UNUSED,2,f,CMD_GET_BACK_EMF,network_basestation_addr);
-			// pidUpdate(pctrl_ptr,pid_feedback);
-			// pidSetInput(pctrl_ptr,pid_input);
-			// dCycle = pctrl.output;
-			// out.sval = dCycle;
-			// f[0] = out.cval[0];
-			// f[1] = out.cval[1];
-			// //send(STATUS_UNUSED,2,f,CMD_GET_BACK_EMF, network_basestation_addr);
-			// //mcSetDutyCycle(1,dCycle/100);
-			//LED_2 = ~LED_2;
+			sample = 0;
 		}
 	}
 }
