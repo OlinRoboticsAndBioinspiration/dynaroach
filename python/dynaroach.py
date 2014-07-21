@@ -331,6 +331,15 @@ class DynaRoach(object):
 		# freq = revs/3
 		# print(freq)
 
+	def hall_speed_test(self):
+		speeds = [0]*90
+		for i in range(10,20):
+			dcycle = i/100.0
+			self.hallenc(duty_cycle = dcycle)
+			print(dcycle)
+			with open('speeds.txt','w') as file: print >> file,self.hall_enc
+
+
 	def test_hallenc(self):
 			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
 
