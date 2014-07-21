@@ -22,6 +22,5 @@ unsigned int get_src_addr(void);
 unsigned int get_basestation_addr(void);
 unsigned int get_pan_id(void);
 unsigned int get_channel(void);
-extern int pid_input;
 
 #endif // __CMD_H

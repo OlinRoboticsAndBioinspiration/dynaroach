@@ -30,7 +30,6 @@
 #define SRC_ADDR_LOC        0x400 
 
 volatile unsigned int last_addr;
-int pid_input = 0;
 
 static union {
     struct {
@@ -158,18 +157,11 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
-    cmd_func[CMD_SET_INPUT]= &cmdSetInput;
     cmd_func[CMD_HALL_ENCODER] = &cmdHallEncoder;
     cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
     cmd_func[CMD_CONFIG_HALLENC] = &ConfigureHallEnc;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
-}
-
-static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame)
-{
-    pid_input = frame[0];
-    MD_LED_2 = 1;
 }
 
 static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)

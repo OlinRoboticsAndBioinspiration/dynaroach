@@ -34,19 +34,8 @@
 #include "ppool.h"
 #include "spi_controller.h"
 #include "wii.h"
-#include "pid.h"
-#include "pid_hw.h"
 #include <stdio.h>
 #include "ams-enc.h"
-
-//these need tuning!
-#define PID_KP			.5
-#define PID_KI          .5
-#define PID_KD			.5
-
-#define PID_KFF			0 //system dependent feedforward term. 
-#define PID_KAW			.5 //antiwindup term
-#define PID_DELAY		2//milliseconds
 
 static unsigned char *pos_data;
 static int current_pos;
@@ -169,10 +158,6 @@ int main ( void )
 	unsigned int network_basestation_pan_id = get_pan_id();
 	unsigned int network_basestation_addr = get_basestation_addr();
 
-	pid_input = 0;//assume robot is stationary and should remain so until told to go//todo, make a speed controller. Something has to set this.
-	int pid_feedback = 0;
-	int dCycle;
-
 	sample = 0;
 
 	SetupClock();
@@ -240,14 +225,6 @@ int main ( void )
 
 	cmdSetup();
 
-	pidObj pctrl;
-
-	pidObj *pctrl_ptr = &pctrl;
-
-	pidInitPIDObj(pctrl_ptr, PID_KP, PID_KI, PID_KD, PID_KAW, PID_KFF);
-
-	pidOnOff(pctrl_ptr,'1');
-
 	attSetup(1.0/TIMER1_FCY);
 	char j;
 
@@ -277,9 +254,6 @@ int main ( void )
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	//radioDeleteQueues();
-
-	pidUpdate(pctrl_ptr,0);
-	pidSetInput(pctrl_ptr,0);
 
 	uByte2 out;
 	char f[2];
