@@ -140,6 +140,7 @@ class DynaRoach(object):
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
 			self.hall_enc = unpack('f',data)
+			print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
 			self.dflash_string= self.dflash_string+''.join(data)
 		elif typeID == cmd.TEST_BATT:
@@ -303,22 +304,21 @@ class DynaRoach(object):
 
 		self.hall_enc = None
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
-		time.sleep(1)
+		time.sleep(0.3)
 
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
 		time.sleep(3)
-
+		#print(self.hall_enc)
 		#MSB= bin(self.hall_enc[0])[2:].zfill(8)
 		#LSB= bin(self.hall_enc[1])[2:].zfill(8)
 		#r1= MSB[:8]+LSB[2:8]
 
 		#self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
 		#time.sleep(3)
-
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(0.2)
 
-		print(self.hall_enc)
+		
 
 		#MSB= bin(self.hall_enc[0])[2:].zfill(8)
 		#LSB= bin(self.hall_enc[1])[2:].zfill(8)
@@ -333,12 +333,13 @@ class DynaRoach(object):
 
 	def hall_speed_test(self):
 		speeds = [0]*90
+		f= open("speeds.txt","w")
 		for i in range(10,20):
 			dcycle = i/100.0
 			self.hallenc(duty_cycle = dcycle)
 			print(dcycle)
-			with open('speeds.txt','w') as file: print >> file,self.hall_enc
-
+			f.write(str(self.hall_enc)+"\n")
+		f.close()
 
 	def test_hallenc(self):
 			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
