@@ -287,7 +287,8 @@ int main ( void )
 	timer5Setup();
 	while(1){
 		cmdHandleRadioRxBuffer();
-
+		radioProcess();
+		
 		if(sample == 1)
 		{
 			pos_data = encGetPos();

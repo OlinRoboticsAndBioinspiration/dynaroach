@@ -179,7 +179,7 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     unsigned char * halldata;
     HallSpeedCalib(200);
     halldata = HallGetSpeed();
-    delay_ms(100);
+    delay_ms(10);
     //HallRunCalib(200);
     //delay_ms(100);
 
@@ -1047,7 +1047,7 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     	while (st->timestamp < t_ticks.lval)
     	{ 
 	    	//HallRunCalib(100);
-			halldata = HallGetCalibParam();
+			halldata = HallGetSpeed();
 	    	MD_LED_1 = ~MD_LED_1;
 	    	buffer[0] = halldata[0];
 	    	buffer[1] = halldata[1];
