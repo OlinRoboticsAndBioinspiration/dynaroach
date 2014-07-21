@@ -295,7 +295,7 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.GET_GYRO_CALIB_PARAM, [])
 		self.gyro_offsets = None
 
-	def hallenc(self, channel_num=1, duty_cycle=0.2):
+	def hallenc(self, channel_num=1, duty_cycle=0.5):
 
 		data = ''.join(chr(0) for i in range(2))
 		channel = chr(channel_num)
@@ -334,12 +334,27 @@ class DynaRoach(object):
 	def hall_speed_test(self):
 		speeds = [0]*90
 		f= open("speeds.txt","w")
-		for i in range(10,20):
+		for i in range(10,41):
 			dcycle = i/100.0
 			self.hallenc(duty_cycle = dcycle)
 			print(dcycle)
 			f.write(str(self.hall_enc)+"\n")
+			time.sleep(1)
 		f.close()
+		
+	def set_speed(channel= 1):
+		'''
+		Description:
+		Set a speed of a robot by inputing an ideal speed to pid controller that is embedded in the robot
+		'''
+		speed= input('Enter the speed in Hz:')
+		print('Running the robot in %d.....' %speed)
+
+		#ConvtoDuty= 323.5*float(speed)**5-991.0*float(speed)**4+117.0*float(speed)**3-668.6*float(speed)**2+191.4*float(speed)-0.0054
+		print(ConvtoDuty)
+		#cmd_data = channel+chr(int(ConvtoDuty*100))
+		#self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SPEED,cmd_data)
+
 
 	def test_hallenc(self):
 			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
