@@ -173,8 +173,6 @@ int main ( void )
 	int pid_feedback = 0;
 	int dCycle;
 
-	pUpdate = 0;
-	pCounter = 0;
 	sample = 0;
 
 	SetupClock();
