@@ -177,13 +177,15 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     LED_2 = ~LED_2;
     int i;
     unsigned char * halldata;
+    for(i=0; i<3; i++){
     HallSpeedCalib(200);
     halldata = HallGetSpeed();
-    delay_ms(10);
+    send(status, 4, halldata, CMD_HALL_ENCODER, last_addr);
+    delay_ms(100);
+	}
+    
     //HallRunCalib(200);
     //delay_ms(100);
-
-    send(status, 4, halldata, CMD_HALL_ENCODER, last_addr);
     LED_2 = ~LED_2;
 }
 static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
