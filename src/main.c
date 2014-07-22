@@ -125,7 +125,7 @@ static void timer7Setup(void)
 	IPC12bits.T7IP = 0x04; //priority
 	IFS3bits.T7IF = 0; //Flag =0
 	IEC3bits.T7IE = 1; //Enable interrupt
-	//T7CONbits.TON = 0; //Get called in Hall Function 
+	T7CONbits.TON = 1; //Get called in Hall Function 
 }
 
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void){
