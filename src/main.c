@@ -37,15 +37,14 @@
 #include <stdio.h>
 #include "ams-enc.h"
 
-static unsigned char *pos_data;
-static int current_pos;
-static int time_counter;
+static unsigned char *now_pos;
 static int last_pos;
-static int delta;
-static int freq;
+static int current_pos=0;
+static float rps;
 static int i;
 static int sample;
-static float revs;
+static int numsample =0;
+uByte4 speeddata;
 
 void initDma0(void)
 {
@@ -106,10 +105,10 @@ static void timer5Setup(void)
 	T5CONbits.TON = 0; // Disable Timer
 	T5CONbits.TCS = 0; // Select internal instruction cycle clock 
 	T5CONbits.TGATE = 0; // Disable Gated Timer mode
-	T5CONbits.TCKPS = 0b10; // Select 1:256 Prescaler
+	T5CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
 	TMR1 = 0x00; // Clear timer register
 	PR1 = 1250; // Load the period value (.002 s)
-	IPC7bits.T5IP = 0x06; //priority
+	IPC7bits.T5IP = 0x04; //priority
 	IFS1bits.T5IF = 0; //Flag =0
 	IEC1bits.T5IE = 1; //Enable interrupt
 	T5CONbits.TON = 1; //Turn the timer on
@@ -129,24 +128,10 @@ static void timer7Setup(void)
 	//T7CONbits.TON = 0; //Get called in Hall Function 
 }
 
-static void getFeedback(void)
-{	//all of this is working with gear measurement, no conversion
-    current_pos = (pos_data[0]<<6)+(pos_data[1]&0x3F);
-    delta = abs(current_pos-last_pos);
-    
+void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void){
 
-    last_pos = current_pos;
-
-    revs = delta/16384.0;
-
-    freq = (revs/(PID_DELAY*500))*1000;//revs/s *1000;
-}
-
-void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void)//for Hall sampling
-{	
 	sample = 1;
-    
-    LED_1 = ~LED_1;
+    LED_2 = ~LED_2;
     _T5IF = 0;
 }
 
@@ -240,14 +225,12 @@ int main ( void )
 	delay_ms(1000);
 	LED_2 = 1;
 	delay_ms(1000);
-
 	encSetup();
 
 	LED_2 = ~LED_2;
 	//wiiSetupBasic();
 
 	//set_zero();
-
 	char frame[5];
 
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
@@ -255,24 +238,35 @@ int main ( void )
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	//radioDeleteQueues();
 
-	uByte2 out;
-	char f[2];
-
-	timer5Setup();
 	while(1){
 		cmdHandleRadioRxBuffer();
 		radioProcess();
-		
-		if(sample == 1)
-		{
-			pos_data = encGetPos();
-			getFeedback();
-			out.sval = freq;
-			f[0] = out.cval[0];
-			f[1]= out.cval[1];
-			sample = 0;
+
+		if(sample){
+			CRITICAL_SECTION_START
+
+			last_pos = current_pos;
+			for(i= 0; i<100; i++){
+			encGetPos();
+			}
+			now_pos = encGetPos();
+			current_pos = (now_pos[1]>>6)+(now_pos[0]&0x3F);
+
+			rps= (current_pos-last_pos)/(16384*0.002*5);
+			sample = 0 ;
+
+			CRITICAL_SECTION_END
+
+			send(STATUS_UNUSED, 4, speeddata.cval, CMD_HALL_ENCODER, network_basestation_addr);
+			numsample++;
 		}
-	}
+
+	  if(numsample > 499){
+	  speeddata.fval = rps;
+	  send(STATUS_UNUSED, 4, speeddata.cval, CMD_HALL_ENCODER, network_basestation_addr);
+	  numsample = 0;
+		}
+}
 }
 
 void set_zero()
