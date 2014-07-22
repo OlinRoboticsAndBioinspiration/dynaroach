@@ -304,7 +304,7 @@ class DynaRoach(object):
 
 		self.hall_enc = None
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
-		time.sleep(0.3)
+		time.sleep(1)
 
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
 		time.sleep(3)
@@ -316,7 +316,7 @@ class DynaRoach(object):
 		#self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
 		#time.sleep(3)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
-		time.sleep(0.2)
+		time.sleep(2)
 
 		
 
@@ -334,7 +334,7 @@ class DynaRoach(object):
 	def hall_speed_test(self):
 		speeds = [0]*90
 		f= open("speeds.txt","w")
-		for i in range(10,41):
+		for i in range(15,41):
 			dcycle = i/100.0
 			self.hallenc(duty_cycle = dcycle)
 			print(dcycle)
@@ -359,23 +359,13 @@ class DynaRoach(object):
 	def test_hallenc(self):
 			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
 
-			time.sleep(5)
-
-			if(self.last_sample_count == 0):
-				self.get_sample_count()
-				time.sleep(0.5)
-
-			if(self.last_sample_count == 0):
-				print("There is no previously saved data.")
-				return
-			
-			else:
-				self.data_cnt = 0
-				start_page = 0x200
-				print("Transmitting saved data...")
-				self.state_data = []
-				self.data_cnt = 0
-				self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 2))
+			time.sleep(1)
+			self.data_cnt = 0
+			start_page = 0x200
+			print("Transmitting saved data...")
+			self.state_data = []
+			self.data_cnt = 0
+			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 100))
 		# while(1): 
 		# 	time.sleep(2)
 		# 	print(self.hall_enc)

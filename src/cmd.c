@@ -164,17 +164,30 @@ void cmdSetup(void)
     MotorConfig.falling_edge_duty_cycle = 0;
 }
 
-static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame)
-{
+static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame){
+//    int prev,now = 0;
+     int i;
+//     intT delta;
+//     unsigned char * deltap;
     LED_2 = ~LED_2;
-    int i;
     unsigned char * halldata;
-    for(i=0; i<3; i++){
-    HallSpeedCalib(200);
-    halldata = HallGetSpeed();
-    send(status, 4, halldata, CMD_HALL_ENCODER, last_addr);
-    delay_ms(100);
-	}
+    
+    for(i=0; i<2; i++){
+        HallSpeedCalib(500);
+        halldata = HallGetSpeed();
+    // for(i=0;i<200;i++){
+    //     prev= now;
+    //     halldata = encGetPos();
+    //     now = (halldata[0]<<6)+(halldata[1]&0x3F);
+    //     if(now-prev <0){
+    //         delta.i=16384-(prev-now);
+    //     }
+    //     else{
+    //         delta.i=now-prev;
+    //     }
+        // deltap = &delta.c[0];
+        send(status, 4, halldata, CMD_HALL_ENCODER, last_addr);
+    }   
     
     //HallRunCalib(200);
     //delay_ms(100);
@@ -1040,7 +1053,7 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     if(samplehall==1){
     	while (st->timestamp < t_ticks.lval)
     	{ 
-	    	//HallRunCalib(100);
+	    	HallSpeedCalib(100);
 			halldata = HallGetSpeed();
 	    	MD_LED_1 = ~MD_LED_1;
 
