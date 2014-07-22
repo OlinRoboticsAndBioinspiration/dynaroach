@@ -1031,7 +1031,7 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 	LED_1 = ~LED_1;
 	uByte4 t_ticks;
 	unsigned char kDataLength = 2;
-    unsigned char buffer[kDataLength];
+    unsigned char buffer[kDataLength*50];
     static unsigned char buf_idx = 1;
 	StateTransition st;
     unsigned char* halldata;
@@ -1043,17 +1043,15 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 	    	//HallRunCalib(100);
 			halldata = HallGetSpeed();
 	    	MD_LED_1 = ~MD_LED_1;
-	    	buffer[0] = halldata[0];
-	    	buffer[1] = halldata[1];
 
 	    	strcpy((char *)buffer+sample_cnt.sval*kDataLength, halldata);
-			MemLoc.index.byte += kDataLength;
 			sample_cnt.sval++;
 		
 		if (sample_cnt.sval==50){
-			dfmemWrite (buffer, sizeof(buffer), MemLoc.index.page, MemLoc.index.byte, buf_idx);
-			samplehall =0;
+			dfmemWrite (buffer, sizeof(buffer), MemLoc.index.page, 0, buf_idx);
+			samplehall = 0;
 			T7CONbits.TON = 0;
+            sample_cnt.sval = 0;
 
 			//dfmemWriteBuffer(buffer, kDataLength, MemLoc.index.byte, buf_idx);
 			//MemLoc.index.byte += kDataLength;
