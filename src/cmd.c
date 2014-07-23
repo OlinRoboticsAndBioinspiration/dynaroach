@@ -1053,7 +1053,6 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     if(samplehall==1){
     	   	//HallSpeedCalib(100);
 			halldata = encGetPos();
-
 	    	strcpy((char *)buffer+sample_cnt.sval*kDataLength, halldata);
 			sample_cnt.sval++;
 		
