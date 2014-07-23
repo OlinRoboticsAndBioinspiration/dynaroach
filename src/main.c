@@ -39,7 +39,7 @@
 
 static unsigned char *now_pos;
 static int last_pos;
-static int current_pos=0;
+static char current_pos[2];
 static float rps;
 static int i;
 static int sample;
@@ -205,7 +205,7 @@ int main ( void )
 	sclockSetup();
 	timer1Setup();
 	timer2Setup();
-	timer5Setup();
+	//timer5Setup();
 	timer7Setup();
 
 	cmdSetup();
@@ -243,29 +243,26 @@ int main ( void )
 		radioProcess();
 
 		if(sample){
-			CRITICAL_SECTION_START
+			// last_pos = current_pos;
+			// for(i= 0; i<100; i++){
+			// encGetPos();
+			// }
+			// now_pos = encGetPos();
+			// current_pos = (now_pos[1]>>6)+(now_pos[0]&0x3F);
 
-			last_pos = current_pos;
-			for(i= 0; i<100; i++){
-			encGetPos();
-			}
-			now_pos = encGetPos();
-			current_pos = (now_pos[1]>>6)+(now_pos[0]&0x3F);
+			// rps= (current_pos-last_pos)/(16384*0.002*5);
+			sample = 0;
+			current_pos = encGetPos();
 
-			rps= (current_pos-last_pos)/(16384*0.002*5);
-			sample = 0 ;
-
-			CRITICAL_SECTION_END
-
-			send(STATUS_UNUSED, 4, speeddata.cval, CMD_HALL_ENCODER, network_basestation_addr);
+			// send(STATUS_UNUSED, 4, speeddata.cval, CMD_HALL_ENCODER, network_basestation_addr);
 			numsample++;
 		}
 
-	  if(numsample > 499){
-	  speeddata.fval = rps;
-	  send(STATUS_UNUSED, 4, speeddata.cval, CMD_HALL_ENCODER, network_basestation_addr);
-	  numsample = 0;
-		}
+	  	// if(numsample > 499){
+	  	// speeddata.fval = rps;
+	  	// send(STATUS_UNUSED, 2, current_pos, CMD_HALL_ENCODER, network_basestation_addr);
+	  	// numsample = 0;
+	}
 }
 }
 
