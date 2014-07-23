@@ -164,7 +164,7 @@ class DynaRoach(object):
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
 		elif typeID ==cmd.TX_HALLENC:
-			datum = list(unpack('H', data))
+			datum = (unpack('H', data))[0]*HALL_DEGREES_PER_LSB #*0.2
 			#MSB= bin(datum[0])[2:].zfill(8)
 			#LSB= bin(datum[1])[2:].zfill(8)
 			#r1= MSB[:8]+LSB[2:8]
@@ -361,7 +361,7 @@ class DynaRoach(object):
 
 
 	def test_hallenc(self, channel_num=1, duty_cycle=0.3):
-
+		array= []
 		data = ''.join(chr(0) for i in range(2))
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
@@ -370,9 +370,9 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		time.sleep(0.2)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
-		time.sleep(2)
+		time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
-		
+
 		if(self.last_sample_count == 0):
 			self.get_sample_count()
 			time.sleep(0.5)
@@ -388,7 +388,8 @@ class DynaRoach(object):
 			print("Transmitting saved data...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 2))
 		
-		time.sleep(3)
+		time.sleep(2)
+		
 		plt.plot(self.state_data)
 		plt.show()
 
