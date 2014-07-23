@@ -164,13 +164,13 @@ class DynaRoach(object):
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
 		elif typeID ==cmd.TX_HALLENC:
-			datum = list(unpack('2B', data))
-			MSB= bin(datum[0])[2:].zfill(8)
-			LSB= bin(datum[1])[2:].zfill(8)
-			r1= MSB[:8]+LSB[2:8]
-			angle = int(r1,2) * HALL_DEGREES_PER_LSB
-			self.state_data.append(angle)
-			print(angle)
+			datum = list(unpack('H', data))
+			#MSB= bin(datum[0])[2:].zfill(8)
+			#LSB= bin(datum[1])[2:].zfill(8)
+			#r1= MSB[:8]+LSB[2:8]
+			#angle = int(r1,2) * HALL_DEGREES_PER_LSB
+			self.state_data.append(datum)
+			print(datum)
 			self.data_cnt += 1
 			if self.data_cnt % 100 == 0:
 				print self.data_cnt, "/", self.last_sample_count
