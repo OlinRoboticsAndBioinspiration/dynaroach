@@ -166,15 +166,15 @@ void cmdSetup(void)
 
 static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame){
 //    int prev,now = 0;
-     int i;
+    int i;
 //     intT delta;
 //     unsigned char * deltap;
     LED_2 = ~LED_2;
     unsigned char * halldata;
     
-    for(i=0; i<2; i++){
-        HallSpeedCalib(500);
-        halldata = HallGetSpeed();
+    //for(i=0; i<2; i++){
+        //HallSpeedCalib(500);
+        halldata = encGetPos();
     // for(i=0;i<200;i++){
     //     prev= now;
     //     halldata = encGetPos();
@@ -186,8 +186,8 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     //         delta.i=now-prev;
     //     }
         // deltap = &delta.c[0];
-        send(status, 4, halldata, CMD_HALL_ENCODER, last_addr);
-    }   
+        send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
+    //}   
     
     //HallRunCalib(200);
     //delay_ms(100);
@@ -196,7 +196,7 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
 static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
 
 	T7CONbits.TON = 1;
-	hall_start_time= sclockGetTicks();
+	//hall_start_time= sclockGetTicks();
 	MemLoc.index.page = MEM_START_PAGE;
     MemLoc.index.byte = 0;
     sample_cnt.sval =0;
@@ -1044,41 +1044,25 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 	LED_1 = ~LED_1;
 	uByte4 t_ticks;
 	unsigned char kDataLength = 2;
-    unsigned char buffer[kDataLength*50];
+    unsigned char buffer[kDataLength*500];
     static unsigned char buf_idx = 1;
-	StateTransition st;
+	//StateTransition st;
     unsigned char* halldata;
     t_ticks.lval = sclockGetTicks() - hall_start_time;
 
     if(samplehall==1){
-    	while (st->timestamp < t_ticks.lval)
-    	{ 
-	    	HallSpeedCalib(100);
-			halldata = HallGetSpeed();
-	    	MD_LED_1 = ~MD_LED_1;
+    	   	//HallSpeedCalib(100);
+			halldata = encGetPos();
 
 	    	strcpy((char *)buffer+sample_cnt.sval*kDataLength, halldata);
 			sample_cnt.sval++;
 		
-		if (sample_cnt.sval==50){
+		if (sample_cnt.sval==500){
 			dfmemWrite (buffer, sizeof(buffer), MemLoc.index.page, 0, buf_idx);
 			samplehall = 0;
 			T7CONbits.TON = 0;
             sample_cnt.sval = 0;
-
-			//dfmemWriteBuffer(buffer, kDataLength, MemLoc.index.byte, buf_idx);
-			//MemLoc.index.byte += kDataLength;
-			//sample_cnt.sval++;
-			
-			// if(MemLoc.index.byte + kDataLength > 264)
-	  //       {
-	  //           MD_LED_1 = ~MD_LED_1;
-	  //           dfmemWriteBuffer2MemoryNoErase(MemLoc.index.page++, buf_idx);
-	  //           MemLoc.index.byte = 0;
-	  //           buf_idx ^= 0x01;
-	  //       }
-	        }
-	        }
-	}
+             }
+	   }
 		_T7IF = 0;
 	}

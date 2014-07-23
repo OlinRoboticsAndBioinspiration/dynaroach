@@ -139,7 +139,7 @@ class DynaRoach(object):
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_ENCODER:
-			self.hall_enc = unpack('f',data)
+			self.hall_enc = unpack('<h',data)
 			print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
 			self.dflash_string= self.dflash_string+''.join(data)
@@ -357,30 +357,24 @@ class DynaRoach(object):
 
 
 	def test_hallenc(self):
-			self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
 
-			time.sleep(1)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
+		time.sleep(1)
+		if(self.last_sample_count == 0):
+			self.get_sample_count()
+			time.sleep(0.5)
+
+		if(self.last_sample_count == 0):
+			print("There is no previously saved data.")
+			return
+
+		else:
 			self.data_cnt = 0
 			start_page = 0x200
-			print("Transmitting saved data...")
 			self.state_data = []
-			self.data_cnt = 0
-			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 100))
-		# while(1): 
-		# 	time.sleep(2)
-		# 	print(self.hall_enc)
-		# 	new='{0:16b}'.format(self.hall_enc[0])
-		# 	print('new'+ new)
-		# 	what = bin(self.hall_enc[0])[2:]
-		# 	print(what)
-		# 	brep = bin(self.hall_enc[0])[2:].zfill(16)
-		# 	print(brep)
-		# 	res = brep[:7]+brep[10:]
-		# 	angle = int(res,2)*0.0219
-		# 	print(angle)
-		#print(self.hall_enc)
+			print("Transmitting saved data...")
+			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 2))
 		
-
 	def test_gyro(self):
 		#sensitivity scale of gyro is 14.375
 		'''
