@@ -194,12 +194,12 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     LED_2 = ~LED_2;
 }
 static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
-
-	T7CONbits.TON = 1;
+    dfmemErasePage(0x300);
+    MemLoc.index.page = 0x300;//MEM_START_PAGE;
 	//hall_start_time= sclockGetTicks();
-	MemLoc.index.page = 0x300; MEM_START_PAGE;
     MemLoc.index.byte = 0;
     sample_cnt.sval =0;
+    T7CONbits.TON = 1;
     samplehall=1; //startsampling don't know if we need this
     //delay_ms(100);
 }
@@ -1053,11 +1053,12 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     if(samplehall==1){
     	   	//HallSpeedCalib(100);
 			halldata = encGetPos();
-	    	strcpy((char *)buffer+sample_cnt.sval*kDataLength, halldata);
-			sample_cnt.sval++;
-		
-		if (sample_cnt.sval==500){
-			dfmemWrite (buffer, sizeof(buffer), MemLoc.index.page, 0, buf_idx);
+	    	//strcpy((char *)buffer+sample_cnt.sval*kDataLength, halldata);
+			//sample_cnt.sval++;
+			dfmemWrite (halldata, sizeof(halldata), MemLoc.index.page, sample_cnt.sval*kDataLength, buf_idx);
+            sample_cnt.sval++;
+
+            if (sample_cnt.sval==500){
 			samplehall = 0;
 			T7CONbits.TON = 0;
             sample_cnt.sval = 0;
