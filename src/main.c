@@ -252,7 +252,7 @@ int main ( void )
 
 			// rps= (current_pos-last_pos)/(16384*0.002*5);
 			sample = 0;
-			current_pos = encGetPos();
+			now_pos = encGetPos();
 
 			// send(STATUS_UNUSED, 4, speeddata.cval, CMD_HALL_ENCODER, network_basestation_addr);
 			numsample++;
@@ -263,7 +263,6 @@ int main ( void )
 	  	// send(STATUS_UNUSED, 2, current_pos, CMD_HALL_ENCODER, network_basestation_addr);
 	  	// numsample = 0;
 	}
-}
 }
 
 void set_zero()
