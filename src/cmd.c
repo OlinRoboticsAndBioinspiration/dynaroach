@@ -197,7 +197,7 @@ static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigne
 
 	T7CONbits.TON = 1;
 	//hall_start_time= sclockGetTicks();
-	MemLoc.index.page = MEM_START_PAGE;
+	MemLoc.index.page = 0x300; MEM_START_PAGE;
     MemLoc.index.byte = 0;
     sample_cnt.sval =0;
     samplehall=1; //startsampling don't know if we need this
@@ -1042,13 +1042,13 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 {
 	LED_1 = ~LED_1;
-	uByte4 t_ticks;
+	//uByte4 t_ticks;
 	unsigned char kDataLength = 2;
     unsigned char buffer[kDataLength*500];
     static unsigned char buf_idx = 1;
 	//StateTransition st;
     unsigned char* halldata;
-    t_ticks.lval = sclockGetTicks() - hall_start_time;
+    //t_ticks.lval = sclockGetTicks() - hall_start_time;
 
     if(samplehall==1){
     	   	//HallSpeedCalib(100);
@@ -1061,7 +1061,7 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 			samplehall = 0;
 			T7CONbits.TON = 0;
             sample_cnt.sval = 0;
-             }
+            }
 	   }
 		_T7IF = 0;
 	}

@@ -165,8 +165,12 @@ class DynaRoach(object):
 			self.wiidata = unpack('12B',data)
 		elif typeID ==cmd.TX_HALLENC:
 			datum = list(unpack('2B', data))
-			self.state_data.append(datum)
-			print(datum)
+			MSB= bin(datum[0])[2:].zfill(8)
+			LSB= bin(datum[1])[2:].zfill(8)
+			r1= MSB[:8]+LSB[2:8]
+			angle = int(r1,2) * HALL_DEGREES_PER_LSB
+			self.state_data.append(angle)
+			print(angle)
 			self.data_cnt += 1
 			if self.data_cnt % 100 == 0:
 				print self.data_cnt, "/", self.last_sample_count
@@ -360,6 +364,7 @@ class DynaRoach(object):
 
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
 		time.sleep(1)
+
 		if(self.last_sample_count == 0):
 			self.get_sample_count()
 			time.sleep(0.5)
@@ -370,7 +375,7 @@ class DynaRoach(object):
 
 		else:
 			self.data_cnt = 0
-			start_page = 0x200
+			start_page = 0x300
 			self.state_data = []
 			print("Transmitting saved data...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 2))
