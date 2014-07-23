@@ -171,9 +171,9 @@ class DynaRoach(object):
 			#angle = int(r1,2) * HALL_DEGREES_PER_LSB
 			self.state_data.append(datum)
 			print(datum)
-			self.data_cnt += 1
-			if self.data_cnt % 100 == 0:
-				print self.data_cnt, "/", self.last_sample_count
+			#self.data_cnt += 1
+			#if self.data_cnt % 100 == 0:
+			#	print self.data_cnt, "/", self.last_sample_count
 
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
@@ -360,11 +360,19 @@ class DynaRoach(object):
 		#self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SPEED,cmd_data)
 
 
-	def test_hallenc(self):
+	def test_hallenc(self, channel_num=1, duty_cycle=0.3):
 
+		data = ''.join(chr(0) for i in range(2))
+		channel = chr(channel_num)
+		cmd_stop = channel + chr(0)
+		cmd_data = channel+chr(int(duty_cycle*100))
+		
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
+		time.sleep(0.2)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
-		time.sleep(1)
-
+		time.sleep(2)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
+		
 		if(self.last_sample_count == 0):
 			self.get_sample_count()
 			time.sleep(0.5)
@@ -380,6 +388,10 @@ class DynaRoach(object):
 			print("Transmitting saved data...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 2))
 		
+		time.sleep(3)
+		plt.plot(self.state_data)
+		plt.show()
+
 	def test_gyro(self):
 		#sensitivity scale of gyro is 14.375
 		'''
