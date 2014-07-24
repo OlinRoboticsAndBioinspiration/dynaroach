@@ -86,33 +86,33 @@ static void timer2Setup(void)
 	_T2IE = 1;
 }
 
-static void timer6Setup(void)
-{
-	T6CONbits.TON = 0; // Disable Timer
-	T6CONbits.TCS = 0; // Select internal instruction cycle clock 
-	T6CONbits.TGATE = 0; // Disable Gated Timer mode
-	T6CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
-	TMR1 = 0x00; // Clear timer register
-	PR1 = 156000; // Load the period value (1125ms)
-	IPC11bits.T6IP = 0x04; //priority
-	IFS2bits.T6IF = 0; //Flag =0
-	IEC2bits.T6IE = 1; //Enable interrupt
-	T6CONbits.TON = 1; //Turn the timer on
-}
+// static void timer6Setup(void)
+// {
+// 	T6CONbits.TON = 0; // Disable Timer
+// 	T6CONbits.TCS = 0; // Select internal instruction cycle clock 
+// 	T6CONbits.TGATE = 0; // Disable Gated Timer mode
+// 	T6CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
+// 	TMR1 = 0x00; // Clear timer register
+// 	PR1 = 156000; // Load the period value (1125ms)
+// 	IPC11bits.T6IP = 0x04; //priority
+// 	IFS2bits.T6IF = 0; //Flag =0
+// 	IEC2bits.T6IE = 1; //Enable interrupt
+// 	T6CONbits.TON = 1; //Turn the timer on
+// }
 
-static void timer5Setup(void)
-{
-	T5CONbits.TON = 0; // Disable Timer
-	T5CONbits.TCS = 0; // Select internal instruction cycle clock 
-	T5CONbits.TGATE = 0; // Disable Gated Timer mode
-	T5CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
-	TMR1 = 0x00; // Clear timer register
-	PR1 = 1250; // Load the period value (.002 s)
-	IPC7bits.T5IP = 0x04; //priority
-	IFS1bits.T5IF = 0; //Flag =0
-	IEC1bits.T5IE = 1; //Enable interrupt
-	T5CONbits.TON = 1; //Turn the timer on
-}
+// static void timer5Setup(void)
+// {
+// 	T5CONbits.TON = 0; // Disable Timer
+// 	T5CONbits.TCS = 0; // Select internal instruction cycle clock 
+// 	T5CONbits.TGATE = 0; // Disable Gated Timer mode
+// 	T5CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
+// 	TMR1 = 0x00; // Clear timer register
+// 	PR1 = 1250; // Load the period value (.002 s) 
+// 	IPC7bits.T5IP = 0x04; //priority
+// 	IFS1bits.T5IF = 0; //Flag =0
+// 	IEC1bits.T5IE = 1; //Enable interrupt
+// 	T5CONbits.TON = 1; //Turn the timer on
+// }
 
 static void timer7Setup(void)
 {
@@ -121,16 +121,16 @@ static void timer7Setup(void)
 	T7CONbits.TGATE = 0; // Disable Gated Timer mode
 	T7CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
 	TMR1 = 0x00; // Clear timer register
-	PR1 = 1250; // Load the period value (0.002s=500Hz)
+	PR1 = 1; //(unsigned int)0x04E2; // Load the period value (0.002s=500Hz)
 	IPC12bits.T7IP = 0x04; //priority
 	IFS3bits.T7IF = 0; //Flag =0
 	IEC3bits.T7IE = 1; //Enable interrupt
-	T7CONbits.TON = 1; //Get called in Hall Function 
+	T7CONbits.TON = 0; //Get called in Hall Function 
 }
 
 void __attribute__((interrupt, no_auto_psv)) _T5Interrupt(void){
 
-	sample = 1;
+	sample = 0;
     LED_2 = ~LED_2;
     _T5IF = 0;
 }
@@ -203,8 +203,8 @@ int main ( void )
 	xlSetup();
 	dfmemSetup();
 	sclockSetup();
-	timer1Setup();
-	timer2Setup();
+	//timer1Setup();
+	//timer2Setup();
 	//timer5Setup();
 	timer7Setup();
 
@@ -241,75 +241,54 @@ int main ( void )
 	while(1){
 		cmdHandleRadioRxBuffer();
 		radioProcess();
-
-		if(sample){
-			// last_pos = current_pos;
-			// for(i= 0; i<100; i++){
-			// encGetPos();
-			// }
-			// now_pos = encGetPos();
-			// current_pos = (now_pos[1]>>6)+(now_pos[0]&0x3F);
-
-			// rps= (current_pos-last_pos)/(16384*0.002*5);
-			sample = 0;
-			now_pos = encGetPos();
-
-			// send(STATUS_UNUSED, 4, speeddata.cval, CMD_HALL_ENCODER, network_basestation_addr);
-			numsample++;
-		}
-
-	  	// if(numsample > 499){
-	  	// speeddata.fval = rps;
-	  	// send(STATUS_UNUSED, 2, current_pos, CMD_HALL_ENCODER, network_basestation_addr);
-	  	// numsample = 0;
 	}
 }
 
-void set_zero()
-{
-    unsigned char *zero_pos = encGetPos();//get current position- this will be new zero
+// void set_zero()
+// {
+//     unsigned char *zero_pos = encGetPos();//get current position- this will be new zero
 
-    //set programming enable
-    i2cStartTx(2);
-    i2cSendByte(2,0x81);
-    i2cSendByte(2,0x03);
-    i2cSendByte(2,0x01);
-    i2cEndTx(2);
+//     //set programming enable
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x03);
+//     i2cSendByte(2,0x01);
+//     i2cEndTx(2);
 
-    //write zero to correct register
-    i2cStartTx(2);
-    i2cSendByte(2,0x81);
-    i2cSendByte(2,0x16);
-    i2cSendByte(2,zero_pos[0]);
-    i2cSendByte(2,zero_pos[1]);
-    i2cEndTx(2);
+//     //write zero to correct register
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x16);
+//     i2cSendByte(2,zero_pos[0]);
+//     i2cSendByte(2,zero_pos[1]);
+//     i2cEndTx(2);
 
-    //set burn enable
-    i2cStartTx(2);
-    i2cSendByte(2,0x81);
-    i2cSendByte(2,0x03);
-    i2cSendByte(2,0x08);
-    i2cEndTx(2);
+//     //set burn enable
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x03);
+//     i2cSendByte(2,0x08);
+//     i2cEndTx(2);
 
-    zero_pos = encGetPos();
+//     zero_pos = encGetPos();
 
-    int pos;
-    pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+//     int pos;
+//     pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
 
-    if(pos == 0){
-    	LED_2 = ~LED_2;
-    }
+//     if(pos == 0){
+//     	LED_2 = ~LED_2;
+//     }
 
-    //set verify bit
-    i2cStartTx(2);
-    i2cSendByte(2,0x81);
-    i2cSendByte(2,0x03);
-    i2cSendByte(2,0x40);
-    i2cEndTx(2);
+//     //set verify bit
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x03);
+//     i2cSendByte(2,0x40);
+//     i2cEndTx(2);
 
-    pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+//     pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
 
-    if(pos == 0){
-    	LED_2 = ~LED_2;
-    }
-}
+//     if(pos == 0){
+//     	LED_2 = ~LED_2;
+//     }
+// }

@@ -63,6 +63,7 @@ static uByte2 halldata;
 static int samplehall= 0;
 static uByte2 hall_total_cnt;
 static int numbytes=0;
+static int hall_page = 0;
 /**********************************/
 
 unsigned int get_src_addr(void){
@@ -186,8 +187,11 @@ static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigne
 	dfmemErasePage(0x300);
     dfmemErasePage(0x301);
 	dfmemErasePage(0x302);
+	dfmemErasePage(0x303);
+    dfmemErasePage(0x304);
+	dfmemErasePage(0x305);
 
-    MemLoc.index.page = 0x300;//MEM_START_PAGE;
+    hall_page = 0x300;//MEM_START_PAGE;
 	//hall_start_time= sclockGetTicks();
     numbytes = 0;
     hall_total_cnt.sval =0;
@@ -1040,7 +1044,7 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     if(samplehall)
     {
     	halltime.lval = sclockGetTicks();
-		halldata.sval = 40; //encGetPos(); //encGetPos();
+		halldata.sval = encGetPos(); //encGetPos();
 		
 		for(i=0;i<4;i++)
 		{
@@ -1051,19 +1055,19 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 
         if(numbytes*hallDataLength<= 264)
         {
-			dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes*hallDataLength, buf_idx);
+			dfmemWrite (DataWrite, sizeof(DataWrite),hall_page, numbytes*hallDataLength, buf_idx);
             hall_total_cnt.sval++;
             numbytes++;
         }
         else
         {
-            MemLoc.index.page+=1;
+            hall_page++;
             numbytes=0;
-            dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes, buf_idx);
+            dfmemWrite (DataWrite, sizeof(DataWrite), hall_page, numbytes, buf_idx);
             hall_total_cnt.sval++;
         }
     }
-    if (hall_total_cnt.sval>100)
+    if (hall_total_cnt.sval>200)
     {
 			samplehall = 0;
 			T7CONbits.TON = 0;
