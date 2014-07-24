@@ -104,7 +104,8 @@ class DynaRoach(object):
 		self.data_cnt = 0
 		self.state_data = []
 		self.last_sample_count = 0
-
+		self.hall_times=[]
+		self.hall_encdata =[]
 		self.radio = BaseStation(dev_name, baud_rate, dest_addr, self.receive)
 		self.receive_callback = []
 
@@ -164,16 +165,21 @@ class DynaRoach(object):
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
 		elif typeID ==cmd.TX_HALLENC:
-			datum = (unpack('H', data))[0]*HALL_DEGREES_PER_LSB #*0.2
-			#MSB= bin(datum[0])[2:].zfill(8)
-			#LSB= bin(datum[1])[2:].zfill(8)
-			#r1= MSB[:8]+LSB[2:8]
-			#angle = int(r1,2) * HALL_DEGREES_PER_LSB
-			self.state_data.append(datum)
-			print(datum)
-			#self.data_cnt += 1
-			#if self.data_cnt % 100 == 0:
-			#	print self.data_cnt, "/", self.last_sample_count
+			hall_encdata = unpack('<LH',data)
+			self.data_cnt += 1
+			time= hall_encdata[0]
+			datum = hall_encdata[1]#*HALL_DEGREES_PER_LSB #*0.2
+			bindatum= bin(datum).zfill(16)
+			#print(bindatum)
+			print(time)
+			print(datum*HALL_DEGREES_PER_LSB)
+			print(self.data_cnt)
+			self.hall_times.append(time)
+			self.state_data.append(datum*HALL_DEGREES_PER_LSB)
+
+			
+			if self.data_cnt % 500 == 0:
+				print self.data_cnt, "/", self.last_sample_count
 
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
@@ -360,9 +366,7 @@ class DynaRoach(object):
 		#self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SPEED,cmd_data)
 
 
-	def test_hallenc(self, channel_num=1, duty_cycle=0.3):
-		array= []
-		data = ''.join(chr(0) for i in range(2))
+	def test_hallenc(self, channel_num=1, duty_cycle=0.2):
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
 		cmd_data = channel+chr(int(duty_cycle*100))
@@ -370,8 +374,9 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		time.sleep(0.2)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
-		time.sleep(1)
+		time.sleep(3)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
+		time.sleep(0.2)
 
 		if(self.last_sample_count == 0):
 			self.get_sample_count()
@@ -384,13 +389,15 @@ class DynaRoach(object):
 		else:
 			self.data_cnt = 0
 			start_page = 0x300
+			total_sample = self.last_sample_count #500 could be used but inaccurate
 			self.state_data = []
+			self.hall_times= []
 			print("Transmitting saved data...")
-			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page, self.last_sample_count, 2))
-		
+			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, 6))
+			
 		time.sleep(2)
-		
-		plt.plot(self.state_data)
+		#print(self.state_data)
+		plt.plot(self.hall_times,self.state_data)
 		plt.show()
 
 	def test_gyro(self):

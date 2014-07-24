@@ -184,12 +184,8 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
 }
 static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
     
-	dfmemErasePage(0x300);
-    dfmemErasePage(0x301);
-	dfmemErasePage(0x302);
-	dfmemErasePage(0x303);
-    dfmemErasePage(0x304);
-	dfmemErasePage(0x305);
+	dfmemEraseBlock(0x300);
+	dfmemEraseBlock(0x308);
 
     hall_page = 0x300;//MEM_START_PAGE;
 	//hall_start_time= sclockGetTicks();
@@ -1067,7 +1063,7 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
             hall_total_cnt.sval++;
         }
     }
-    if (hall_total_cnt.sval>200)
+    if (hall_total_cnt.sval>499)
     {
 			samplehall = 0;
 			T7CONbits.TON = 0;
