@@ -55,7 +55,14 @@ static int streamMod = 0;
 static int is_data_streaming = 0;
 static int readWiiData = 0;
 static int Wiiinvalid= 0;
+
+/*HALL ENCODER VARIABLES FOR ISR T7*/
+static unsigned char hallDataLength = 6;
+static unsigned char buf_idx = 1;
+static uByte2 halldata;
 static int samplehall= 0;
+static uByte2 hall_total_cnt;
+/**********************************/
 
 unsigned int get_src_addr(void){
     TBLPAG = 0x0;
@@ -200,7 +207,7 @@ static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigne
     MemLoc.index.page = 0x300;//MEM_START_PAGE;
 	//hall_start_time= sclockGetTicks();
     MemLoc.index.byte = 0;
-    sample_cnt.sval =0;
+    hall_cnt.sval =0;
     samplehall=1; //startsampling don't know if we need this
     T7CONbits.TON = 1;
     //delay_ms(100);
@@ -681,8 +688,8 @@ static void cmdGetSampleCount(unsigned char status, unsigned char length, unsign
 {
     if(ROBOT)
     {
-        frame[0] = sample_cnt.cval[0];
-        frame[1] = sample_cnt.cval[1];
+        frame[0] = hall_cnt.cval[0];
+        frame[1] = hall_cnt.cval[1];
         send(status, 2, frame, CMD_GET_SAMPLE_COUNT, last_addr);
     }
 }
@@ -1043,34 +1050,41 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 {
-	LED_1 = ~LED_1;
-	//uByte4 t_ticks;
-	unsigned char kDataLength = 2;
-    unsigned char buffer[kDataLength*500];
-    static unsigned char buf_idx = 1;
-	//StateTransition st;
-    unsigned char* halldata;
-    //t_ticks.lval = sclockGetTicks() - hall_start_time;
-
-    if(samplehall==1){
-    	   	//HallSpeedCalib(100);
+	int numbytes=0;
+	uByte4 halltime;
+	unsigned char DataWrite[hallDataLength];
+    
+    if(samplehall)
+    {
+    		halltime.lval = sclockGetTicks();
 			halldata = encGetPos();
-	    	//strcpy((char *)buffer+sample_cnt.sval*kDataLength, halldata);
-			//sample_cnt.sval++;
-            if(sample_cnt.sval*kDataLength<= 264){
-			dfmemWrite (halldata, sizeof(halldata), MemLoc.index.page, sample_cnt.sval*kDataLength, buf_idx);
-            sample_cnt.sval++;}
-            else{
-            MemLoc.index.page+=1;
-            sample_cnt.sval++;
-            dfmemWrite (halldata, sizeof(halldata), MemLoc.index.page, 0, buf_idx);
-            }
+			
+			for(i=0;i<4;i++)
+			{
+				DataWrite[i]=halltime.cval[i];
+			}
+			DataWrite[4]=halldata.cval[0];
+			DataWrite[5]=halldata.cval[1];
 
-            if (sample_cnt.sval==500){
+            if(numbytes*hallDataLength<= 264)
+            {
+				dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes*hallDataLength, buf_idx);
+	            hall_total_cnt.sval++;
+	            numbytes++;
+	        }
+            else
+            {
+	            MemLoc.index.page+=1;
+	            hall_total_cnt.sval++;
+	            numbytes=0;
+	            dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes, buf_idx);
+	        }
+    }
+    if (hall_total_cnt.sval>499)
+    {
 			samplehall = 0;
 			T7CONbits.TON = 0;
-            
-            }
-	   }
-		_T7IF = 0;
-	}
+    }
+	
+	_T7IF = 0;
+}
