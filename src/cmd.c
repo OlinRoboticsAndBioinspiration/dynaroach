@@ -62,6 +62,7 @@ static unsigned char buf_idx = 1;
 static uByte2 halldata;
 static int samplehall= 0;
 static uByte2 hall_total_cnt;
+static int numbytes=0;
 /**********************************/
 
 unsigned int get_src_addr(void){
@@ -172,41 +173,23 @@ void cmdSetup(void)
 }
 
 static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame){
-//    int prev,now = 0;
-    int i;
-//     intT delta;
-//     unsigned char * deltap;
+
     LED_2 = ~LED_2;
     uByte2 halldata;
-    
-    //for(i=0; i<2; i++){
-        //HallSpeedCalib(500);
+
     halldata.sval = encGetPos();
-    // for(i=0;i<200;i++){
-    //     prev= now;
-    //     halldata = encGetPos();
-    //     now = (halldata[0]<<6)+(halldata[1]&0x3F);
-    //     if(now-prev <0){
-    //         delta.i=16384-(prev-now);
-    //     }
-    //     else{
-    //         delta.i=now-prev;
-    //     }
-        // deltap = &delta.c[0];
-        send(status, 2, halldata.cval, CMD_HALL_ENCODER, last_addr);
-    //}   
-    
-    //HallRunCalib(200);
-    //delay_ms(100);
+    send(status, 2, halldata.cval, CMD_HALL_ENCODER, last_addr);
     LED_2 = ~LED_2;
 }
 static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
-    dfmemErasePage(0x300);
+    
+	dfmemErasePage(0x300);
     dfmemErasePage(0x301);
-    dfmemErasePage(0x302);
+	dfmemErasePage(0x302);
+
     MemLoc.index.page = 0x300;//MEM_START_PAGE;
 	//hall_start_time= sclockGetTicks();
-    MemLoc.index.byte = 0;
+    numbytes = 0;
     hall_total_cnt.sval =0;
     samplehall=1; //startsampling don't know if we need this
     T7CONbits.TON = 1;
@@ -1050,7 +1033,6 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 {
-	int numbytes=0;
 	uByte4 halltime;
 	unsigned char DataWrite[hallDataLength];
     int i;
@@ -1058,30 +1040,30 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     if(samplehall)
     {
     	halltime.lval = sclockGetTicks();
-		halldata.sval = encGetPos();
+		halldata.sval = 40; //encGetPos(); //encGetPos();
 		
 		for(i=0;i<4;i++)
 		{
 			DataWrite[i]=halltime.cval[i];
-			}
+		}
 			DataWrite[4]=halldata.cval[0];
 			DataWrite[5]=halldata.cval[1];
 
-            if(numbytes*hallDataLength<= 264)
-            {
-				dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes*hallDataLength, buf_idx);
-	            hall_total_cnt.sval++;
-	            numbytes++;
-	        }
-            else
-            {
-	            MemLoc.index.page+=1;
-	            hall_total_cnt.sval++;
-	            numbytes=0;
-	            dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes, buf_idx);
-	        }
+        if(numbytes*hallDataLength<= 264)
+        {
+			dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes*hallDataLength, buf_idx);
+            hall_total_cnt.sval++;
+            numbytes++;
+        }
+        else
+        {
+            MemLoc.index.page+=1;
+            numbytes=0;
+            dfmemWrite (DataWrite, sizeof(DataWrite), MemLoc.index.page, numbytes, buf_idx);
+            hall_total_cnt.sval++;
+        }
     }
-    if (hall_total_cnt.sval>499)
+    if (hall_total_cnt.sval>100)
     {
 			samplehall = 0;
 			T7CONbits.TON = 0;
