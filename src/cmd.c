@@ -177,11 +177,11 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
 //     intT delta;
 //     unsigned char * deltap;
     LED_2 = ~LED_2;
-    unsigned char * halldata;
+    uByte2 halldata;
     
     //for(i=0; i<2; i++){
         //HallSpeedCalib(500);
-        halldata = encGetPos();
+    halldata.sval = encGetPos();
     // for(i=0;i<200;i++){
     //     prev= now;
     //     halldata = encGetPos();
@@ -193,7 +193,7 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     //         delta.i=now-prev;
     //     }
         // deltap = &delta.c[0];
-        send(status, 2, halldata, CMD_HALL_ENCODER, last_addr);
+        send(status, 2, halldata.cval, CMD_HALL_ENCODER, last_addr);
     //}   
     
     //HallRunCalib(200);
@@ -207,7 +207,7 @@ static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigne
     MemLoc.index.page = 0x300;//MEM_START_PAGE;
 	//hall_start_time= sclockGetTicks();
     MemLoc.index.byte = 0;
-    hall_cnt.sval =0;
+    hall_total_cnt.sval =0;
     samplehall=1; //startsampling don't know if we need this
     T7CONbits.TON = 1;
     //delay_ms(100);
@@ -688,8 +688,8 @@ static void cmdGetSampleCount(unsigned char status, unsigned char length, unsign
 {
     if(ROBOT)
     {
-        frame[0] = hall_cnt.cval[0];
-        frame[1] = hall_cnt.cval[1];
+        frame[0] = hall_total_cnt.cval[0];
+        frame[1] = hall_total_cnt.cval[1];
         send(status, 2, frame, CMD_GET_SAMPLE_COUNT, last_addr);
     }
 }
@@ -1053,15 +1053,16 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 	int numbytes=0;
 	uByte4 halltime;
 	unsigned char DataWrite[hallDataLength];
+    int i;
     
     if(samplehall)
     {
-    		halltime.lval = sclockGetTicks();
-			halldata = encGetPos();
-			
-			for(i=0;i<4;i++)
-			{
-				DataWrite[i]=halltime.cval[i];
+    	halltime.lval = sclockGetTicks();
+		halldata.sval = encGetPos();
+		
+		for(i=0;i<4;i++)
+		{
+			DataWrite[i]=halltime.cval[i];
 			}
 			DataWrite[4]=halldata.cval[0];
 			DataWrite[5]=halldata.cval[1];
