@@ -21,6 +21,7 @@
 #include <string.h>
 #include <stdint.h>
 #include "ams-enc.h"
+#include "carray.h"
 //#include "hall.h"
 
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
@@ -89,6 +90,7 @@ unsigned int get_channel(void){
     unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+6);
     return addr;
 }
+
 
 void(*cmd_func[MAX_CMD_FUNC_SIZE])(unsigned char, unsigned char, unsigned char*);
 
@@ -186,14 +188,11 @@ static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigne
     
 	dfmemEraseBlock(0x300);
 	dfmemEraseBlock(0x308);
-
-    hall_page = 0x300;//MEM_START_PAGE;
-	//hall_start_time= sclockGetTicks();
+    hall_page = 0x300;
     numbytes = 0;
     hall_total_cnt.sval =0;
-    samplehall=1; //startsampling don't know if we need this
+   	samplehall=1;
     T7CONbits.TON = 1;
-    //delay_ms(100);
 }
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
@@ -1031,27 +1030,42 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
   
 }
 
-void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
-{
-	uByte4 halltime;
-	unsigned char DataWrite[hallDataLength];
-    int i;
-    
-    if(samplehall)
-    {
-    	halltime.lval = sclockGetTicks();
-		halldata.sval = encGetPos(); //encGetPos();
-		
-		for(i=0;i<4;i++)
-		{
-			DataWrite[i]=halltime.cval[i];
-		}
-			DataWrite[4]=halldata.cval[0];
-			DataWrite[5]=halldata.cval[1];
+/******************************************************************************
+*************FUNCTION POINTER QUEUE***************************************
+*******************************************************************************/
+#define EXC_FUNC_MAX 10
+static CircArray Exc;
+
+
+void ExcSetup(){
+    Exc= carrayCreate(EXC_FUNC_MAX);
+}
+
+static void ExcGetHallEncPos();
+
+void (*ExcGetHall)() = &ExcGetHallEncPos; //Function Pointer
+ 
+static void ExcGetHallEncPos(){
+        LED_1 = ~LED_1;
+        LED_3 = ~LED_3;
+        
+        uByte4 halltime;
+        unsigned char DataWrite[hallDataLength];
+        int i;
+
+        halltime.lval = sclockGetTicks();
+        halldata.sval = encGetPos(); //encGetPos();
+        
+        for(i=0;i<4;i++)
+        {
+            DataWrite[i]=halltime.cval[i];
+        }
+            DataWrite[4]=halldata.cval[0];
+            DataWrite[5]=halldata.cval[1];
 
         if(numbytes*hallDataLength<= 264)
         {
-			dfmemWrite (DataWrite, sizeof(DataWrite),hall_page, numbytes*hallDataLength, buf_idx);
+            dfmemWrite (DataWrite, sizeof(DataWrite),hall_page, numbytes*hallDataLength, buf_idx);
             hall_total_cnt.sval++;
             numbytes++;
         }
@@ -1062,12 +1076,32 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
             dfmemWrite (DataWrite, sizeof(DataWrite), hall_page, numbytes, buf_idx);
             hall_total_cnt.sval++;
         }
+}
+
+void cmdHandleExcBuffer(void){
+    void(*item)();
+    item = carrayPopHead(Exc);
+    if(item != NULL)
+    {
+        item();
+    }
+    return;
+}
+
+/*************************************************************************
+****************************************INTERRUPT7************************
+*************************************************************************/
+
+void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
+{
+    if(samplehall)
+    { 
+        carrayAddTail(Exc,ExcGetHall);
     }
     if (hall_total_cnt.sval>499)
     {
-			samplehall = 0;
-			T7CONbits.TON = 0;
+        samplehall = 0;
+        T7CONbits.TON = 0;
     }
-	
-	_T7IF = 0;
+    _T7IF = 0;
 }

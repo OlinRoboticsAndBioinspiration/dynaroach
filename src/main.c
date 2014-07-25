@@ -226,7 +226,7 @@ int main ( void )
 	LED_2 = 1;
 	delay_ms(1000);
 	encSetup();
-
+	ExcSetup();
 	LED_2 = ~LED_2;
 	//wiiSetupBasic();
 
@@ -241,6 +241,8 @@ int main ( void )
 	while(1){
 		cmdHandleRadioRxBuffer();
 		radioProcess();
+		cmdHandleExcBuffer();
+
 	}
 }
 

@@ -53,6 +53,7 @@ DFMEM_PAGE_SIZES = {
 					}
 
 SAMPLE_BYTES = 35
+HALL_SAMPLE_BYTES = 6 
 
 TICKS_PER_MILLI     = 625.0
 XL_CNTS_PER_G       = 256.0
@@ -79,6 +80,7 @@ MEAS_COV = .5 #see above
 STATE_TRAN = 1 #assuming that the leader is moving forward
 
 HALL_DEGREES_PER_LSB = 0.0219
+PIC_PR = 40*10**(6)
 
 class DynaRoach(object):
 	'''Class representing the dynaRoACH robot'''
@@ -98,14 +100,13 @@ class DynaRoach(object):
 					  /dev/tty.usbserial.
 				print ord(datum)
 		'''
-
+		
 		self.dest_addr = dest_addr
 		self.last_packet = None
 		self.data_cnt = 0
 		self.state_data = []
 		self.last_sample_count = 0
-		self.hall_times=[]
-		self.hall_encdata =[]
+		
 		self.radio = BaseStation(dev_name, baud_rate, dest_addr, self.receive)
 		self.receive_callback = []
 
@@ -113,7 +114,16 @@ class DynaRoach(object):
 		self.gyro_res = [(0,0,0),(0,0,0)]
 		self.bemf = 0
 
+		self.hall_avr_speed = []
 		self.hall_enc = []
+		self.hall_speed= []
+		self.hall_times=[]
+		self.hall_encdata =[]
+		self.dataacc = 0
+		self.timeacc = 0
+		self.pasttime= 0
+		self.pastdatum = 0
+
 		self.dflash_string = ""
 		self.vbatt = 0
 		self.dfmem_page_size = DFMEM_PAGE_SIZES[dest_addr]
@@ -165,21 +175,20 @@ class DynaRoach(object):
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
 		elif typeID ==cmd.TX_HALLENC:
-			hall_encdata = unpack('<LH',data)
-			self.data_cnt += 1
-			time= hall_encdata[0]
-			datum = hall_encdata[1]#*HALL_DEGREES_PER_LSB #*0.2
-			bindatum= bin(datum).zfill(16)
-			#print(bindatum)
-			print(time)
-			print(datum*HALL_DEGREES_PER_LSB)
-			print(self.data_cnt)
-			self.hall_times.append(time)
-			self.state_data.append(datum*HALL_DEGREES_PER_LSB)
-
 			
-			if self.data_cnt % 500 == 0:
-				print self.data_cnt, "/", self.last_sample_count
+			hall_encdata = unpack('<LH',data)
+
+			time= hall_encdata[0] #in seconds
+			datum = hall_encdata[1]#degrees
+
+			self.hall_times.append(time) #will be converted to seconds later
+			self.state_data.append(datum)
+
+			self.data_cnt += 1
+			
+			#self.hall_avr_speed.append(unwrap(avrspeed))
+			# if self.data_cnt % 300 == 0:
+			# 	print self.data_cnt, "/", self.last_sample_count
 
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
@@ -282,7 +291,7 @@ class DynaRoach(object):
 		'''
 
 		data_out = sma.to_cmd_data()
-		self.state_data = []
+		self.state_data = [0]
 		self.data_cnt = 0
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_SMA, data_out)
 
@@ -370,11 +379,10 @@ class DynaRoach(object):
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
 		cmd_data = channel+chr(int(duty_cycle*100))
-		
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		time.sleep(0.2)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
-		time.sleep(3)
+		time.sleep(5)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(0.2)
 
@@ -392,18 +400,45 @@ class DynaRoach(object):
 			total_sample = self.last_sample_count #500 could be used but inaccurate
 			self.state_data = []
 			self.hall_times= []
+			self.hall_avr_speed =[]
+			unroll= []
+			tdelta=0
 			print("Transmitting saved data...")
-			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, 6))
-			
-		time.sleep(2)
-		#print(self.state_data)
-		plt.plot(self.hall_times,self.state_data)
+			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
+
+
+		time.sleep(10)
+		self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
+		self.state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.state_data]
+	
+		tdelta = self.hall_times[2]-self.hall_times[1]
+		print(tdelta)
+		unroll= np.diff(np.unwrap(self.state_data,180))
+		self.hall_avr_speed =[x/(360*tdelta) for x in unroll] #360 for one revolution to get HZ
+
+		print(self.hall_avr_speed)
+		plt.figure(1)
+		plt.subplot(211)
+		plt.plot(self.hall_times,self.state_data,'b-')
+		plt.xlim((self.hall_times[0], self.hall_times[total_sample]))
+		plt.ylim((0,400))
+		plt.xlabel('Time(s)')
+		plt.ylabel('Input Gear Position(degrees)')
+		plt.title('Input Gear position over time with %d samples'%total_sample)
+		plt.subplot(212)
+		plt.plot(self.hall_avr_speed,'ro')
+		#plt.xlim((self.hall_times[0], self.hall_times[total_sample]))
+		#plt.ylim((0,100))
+		plt.xlabel('Num of samples')
+		plt.ylabel('Input Gear Speed(Hz)')
+		plt.title('Input Gear Average Speed with %d samples'%total_sample)
+		plt.tight_layout()
 		plt.show()
 
 	def test_gyro(self):
 		#sensitivity scale of gyro is 14.375
 		'''
-		Description:
+		Description:ftest
 			Read the XYZ values from the gyroscope.
 		'''
 		print("Prepare the test desk(Vigor RECISION BO28) with 15 rpm...")
