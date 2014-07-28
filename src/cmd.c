@@ -1036,16 +1036,15 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 #define EXC_FUNC_MAX 10
 static CircArray Exc;
 
-
 void ExcSetup(){
     Exc= carrayCreate(EXC_FUNC_MAX);
 }
 
-static void ExcGetHallEncPos();
+static void ExcGetHallEncPos(void);//Function Declaration
 
-void (*ExcGetHall)() = &ExcGetHallEncPos; //Function Pointer
+void (*ExcGetHall)(void) = &ExcGetHallEncPos; //Function Pointer
  
-static void ExcGetHallEncPos(){
+static void ExcGetHallEncPos(void){
         LED_1 = ~LED_1;
         LED_3 = ~LED_3;
         
@@ -1080,6 +1079,7 @@ static void ExcGetHallEncPos(){
 
 void cmdHandleExcBuffer(void){
     void(*item)();
+
     item = carrayPopHead(Exc);
     if(item != NULL)
     {
@@ -1098,7 +1098,10 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     { 
         carrayAddTail(Exc,ExcGetHall);
     }
-    if (hall_total_cnt.sval>499)
+
+    LED_1=~LED_1;
+
+    if (hall_total_cnt.sval>300)
     {
         samplehall = 0;
         T7CONbits.TON = 0;
