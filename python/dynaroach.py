@@ -368,12 +368,12 @@ class DynaRoach(object):
 		#self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SPEED,cmd_data)
 
 	def open_looptest(self):
-		for i in range(10):
-			openspeed = 0.2+0.02*i
+		for i in range(20):
+			openspeed = 0.3+0.01*i
 			self.test_hallenc(channel_num=1, duty_cycle=openspeed)
-			time.sleep(1)
+			time.sleep(2)
 			
-	def test_hallenc(self, channel_num=1, duty_cycle=0.2):
+	def test_hallenc(self, channel_num=1, duty_cycle=0.035):
 		self.last_sample_count = 0
 		total_sample = 0
 		
@@ -382,11 +382,11 @@ class DynaRoach(object):
 		cmd_data = channel+chr(int(duty_cycle*100))
 		
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
-		time.sleep(0.2)
+		time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
-		time.sleep(7)#Delay between configenc-stopmotor
+		time.sleep(6)#Delay between configenc-stopmotor
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
-		time.sleep(1)#Delay matters so that last sample gets all
+		time.sleep(2)#Delay matters so that last sample gets all
 
 		if(self.last_sample_count == 0):
 			self.get_sample_count()
@@ -410,7 +410,7 @@ class DynaRoach(object):
 			print("Transmitting saved data...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
 			
-			time.sleep(10)
+			time.sleep(12)
 			self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
 			self.state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.state_data]
 			self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]

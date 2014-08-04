@@ -885,15 +885,15 @@ static void ExcGetHallEncPos(void)
         {
             rotation_cnt++;
         }
-        if(rotation_cnt > 4)
+        if(rotation_cnt>4)
         {
-            Out_hallData.lval = In_hallData.lval/5;
+            Out_hallData.lval = (16384-In_hallData.lval)/5;
             rotation_cnt = 0;
         }
 
         else
         {
-            Out_hallData.lval = rotation_cnt*3277 + In_hallData.lval/5; //3276.8= 2^14/5
+            Out_hallData.lval = 16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
         }
 
         past_In_hallData.lval = In_hallData.lval;

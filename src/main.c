@@ -121,7 +121,7 @@ static void timer7Setup(void)
 	T7CONbits.TGATE = 0; // Disable Gated Timer mode
 	T7CONbits.TCKPS = 0b01; // Select 1:8 Prescaler
 	TMR1 = 0x00; // Clear timer register
-	PR1 = 9999; //(unsigned int)0x04E2; // Load the period value (0.002s=500Hz) PR1= 0.002/(25e-9*8)-1
+	PR1 = 4999; //(unsigned int)0x04E2; // Load the period value (0.002s=500Hz) PR1= 0.002/(25e-9*8)-1
 	IPC12bits.T7IP = 0x04; //priority
 	IFS3bits.T7IF = 0; //Flag =0
 	IEC3bits.T7IE = 1; //Enable interrupt
