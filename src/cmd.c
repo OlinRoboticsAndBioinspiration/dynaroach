@@ -58,13 +58,17 @@ static int readWiiData = 0;
 static int Wiiinvalid= 0;
 
 /*HALL ENCODER VARIABLES FOR ISR T7*/
-static unsigned char hallDataLength = 6;
+static unsigned char hallDataLength = 12;
+static unsigned long acc_HallAng = 0;
 static unsigned char buf_idx = 1;
-static uByte2 halldata;
+static uByte4 In_hallData;
+static uByte4 past_In_hallData;
+static uByte4 Out_hallData;
 static int samplehall= 0;
 static uByte2 hall_total_cnt;
 static int numbytes=0;
 static int hall_page = 0;
+static unsigned char rotation_cnt=0;
 /**********************************/
 
 unsigned int get_src_addr(void){
@@ -185,14 +189,23 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     LED_2 = ~LED_2;
 }
 static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
-    
+    // dfmemErasePage(0x300);
+    // dfmemErasePage(0x301);
+    // dfmemErasePage(0x302);
+    // dfmemErasePage(0x303);
+    // dfmemErasePage(0x304);
+    // dfmemErasePage(0x305);
 	dfmemEraseBlock(0x300);
 	dfmemEraseBlock(0x308);
+    dfmemEraseBlock(0x316);
+    dfmemEraseBlock(0x324);
     hall_page = 0x300;
     numbytes = 0;
     hall_total_cnt.sval =0;
+    past_In_hallData.lval =0;
    	samplehall=1;
     T7CONbits.TON = 1;
+    //halldata.sval= 0;
 }
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
@@ -546,15 +559,6 @@ static void cmdTestGyro(unsigned char status, unsigned char length, unsigned cha
 *****************************************************************************/
 static void cmdTestHall(unsigned char status, unsigned char length, unsigned char* frame)
 {
-
-    //LED_2 = 0;
-    //LED_3 = 0;
-    //while(swatchToc() < 10000000)
-    //{
-    //    LED_1 = PORTBbits.RB7;
-    //}
-    //LED_2 = 1;
-    //LED_3 = 1;
     return;
 }
 
@@ -723,188 +727,6 @@ void send(unsigned char status, unsigned char length, unsigned char *frame, unsi
     }
 }
 
-void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
-{
-    uByte4 t_ticks, yaw, pitch, roll;
-    uByte2 bemf, v_batt;
-    unsigned char hall_state = 0;
-
-    unsigned char* xlXYZ;
-    unsigned char kDataLength = 35;
-    unsigned char buffer[kDataLength];
-    static unsigned char buf_idx = 1;
-    StateTransition st;
-    int i;
-
-    st = stTable[st_idx];
-
-    t_ticks.lval = sclockGetTicks() - trial_start_time;
-    //Get pose estimates
-    if(attIsRunning())
-    {
-        attReadSensorData();
-        attEstimatePose();
-        yaw.fval = attGetYaw();
-        pitch.fval = attGetPitch();
-        roll.fval  = attGetRoll();
-        xlXYZ = xlToString();
-    }
-
-    //Sample back EMF
-    AD1CHS0bits.CH0SA = 0b00001;      //Select AN1 (back EMF) for sampling
-    AD1CON1bits.SAMP = 1;
-    while(!AD1CON1bits.DONE);
-    AD1CON1bits.SAMP = 0;
-    AD1CON1bits.DONE = 0;
-    bemf.sval = ADC1BUF0;
-
-    //Sample battery voltage
-    AD1CHS0bits.CH0SA = 0b00000;      //Select AN0 (battery voltage) for sampling
-    AD1CON1bits.SAMP = 1;
-    while(!AD1CON1bits.DONE);
-    AD1CON1bits.SAMP = 0;
-    AD1CON1bits.DONE = 0;
-    v_batt.sval = ADC1BUF0;
-
-    //Get the state of the hall effect sensor
-    hall_state = PORTBbits.RB7;
-
-    while (st->timestamp < t_ticks.lval)
-    {
-        // Begin trackable switching code
-        if(st->cmd == CMD_SET_MOTOR)
-        {
-            if(st->params[1] > 0 && tms == 0)
-            {
-                MD_LED_1 = 1;
-                MD_LED_2 = 1;
-                tms = 1;
-            }else if(st->params[1] == 0 && tms == 1)
-            {
-                MD_LED_1 = 0;
-                MD_LED_2 = 0;
-                tms = 0;
-            }
-        }else if (st->cmd == CMD_SET_SMA)
-        {
-            if(st->params[0] == SMA_LEFT)
-            {
-                if(st->params[1] > 0 && tls == 0)
-                {
-                    MD_LED_1 = 0;
-                    tls = 1;
-                }else if (st->params[1] == 0 && tls == 1)
-                {
-                    MD_LED_1 = 1;
-                    tls = 0;
-                }
-            }else if(st->params[0] == SMA_RIGHT)
-            {
-                if(st->params[1] > 0 && trs == 0)
-                {
-                    MD_LED_2 = 0;
-                    trs = 1;
-                }else if (st->params[1] == 0 && trs == 1)
-                {
-                    MD_LED_2 = 1;
-                    trs = 0;
-                }
-            }
-        }
-
-        if (do_sweep == 1)
-        {
-          do_sweep = 0;
-          MotorConfig.rising_edge_duty_cycle = 0.0f;
-          MotorConfig.falling_edge_duty_cycle = 0.0f;
-
-        }
-
-        cmd_func[st->cmd](STATUS_UNUSED, 2, st->params);
-        st_idx++;
-        if (st_idx == st_cnt)
-        {
-            attSetEstimateRunning(0);
-            MD_LED_1 = 0;
-            MD_LED_2 = 0;
-            //Turn off SMA
-            mcSetDutyCycle(3, 0);
-            //Turn off Motor
-            MotorConfig.rising_edge_duty_cycle = 0.0f;
-            MotorConfig.falling_edge_duty_cycle = 0.0f;
-            mcSetDutyCycle(1, 0);
-
-            //Free up the resources
-            int i;
-            for (i=0; i < st_cnt; ++i)
-            {
-              stFree(stTable[i]);
-            }
-            free(stTable);
-
-            _T1IE = 0;
-            break;
-        }else
-        {
-            st = stTable[st_idx];
-        }
-    }
-
-    //Increment motor speeds for sweep
-    if (do_sweep)
-    {
-      float dt = (t_ticks.lval - stTable[st_idx-1]->timestamp);
-      float percent = dt/(stTable[st_idx]->timestamp - stTable[st_idx-1]->timestamp);
-
-      float motor = sweep_stop_speed*(percent)+sweep_start_speed*(1-percent);
-      //if (motor < 30 && motor > -30) {
-        MotorConfig.falling_edge_duty_cycle = motor;
-        MotorConfig.rising_edge_duty_cycle = motor;
-        mcSetDutyCycle(1, motor);
-      //}
-    }
-
-    if (saveData2Flash == 1)
-    {
-        for(i = 0; i < 4; i++)
-        {
-            buffer[i] = t_ticks.cval[i];
-            buffer[i+4] = yaw.cval[i];
-            buffer[i+8] = pitch.cval[i];
-            buffer[i+12] = roll.cval[i];
-        }
-
-        buffer[16] = xlXYZ[0];
-        buffer[17] = xlXYZ[1];
-        buffer[18] = xlXYZ[2];
-        buffer[19] = xlXYZ[3];
-        buffer[20] = xlXYZ[4];
-        buffer[21] = xlXYZ[5];
-        buffer[22] = bemf.cval[0];
-        buffer[23] = bemf.cval[1];
-        buffer[24] = 0;
-        buffer[25] = 0;
-        buffer[26] = hall_state;
-        buffer[27] = v_batt.cval[0];
-        buffer[28] = v_batt.cval[1];
-
-        gyroDumpData(buffer+29);
-
-        dfmemWriteBuffer(buffer, kDataLength, MemLoc.index.byte, buf_idx);
-        MemLoc.index.byte += kDataLength;
-        sample_cnt.sval++;
-        if(MemLoc.index.byte + kDataLength > 264)
-        {
-            MD_LED_1 = ~MD_LED_1;
-            dfmemWriteBuffer2MemoryNoErase(MemLoc.index.page++, buf_idx);
-            MemLoc.index.byte = 0;
-            buf_idx ^= 0x01;
-        }
-    }
-
-    _T1IF = 0;
-}
-
 void sendCurrentSensors() {
     uByte4 t_ticks, yaw, pitch, roll;
     uByte2 bemf, v_batt;
@@ -1031,52 +853,82 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 }
 
 /******************************************************************************
-*************FUNCTION POINTER QUEUE***************************************
+*******************FUNCTION POINTER QUEUE*********************************
 *******************************************************************************/
 #define EXC_FUNC_MAX 10
+
+
+//CREATE CIRCULAR ARRAY//
 static CircArray Exc;
 
+//SETTING UP THE CIRCUILAR ARRAY WITH MAX FUNC =10//
 void ExcSetup(){
     Exc= carrayCreate(EXC_FUNC_MAX);
 }
 
-static void ExcGetHallEncPos(void);//Function Declaration
+//Function Declaration//b
+static void ExcGetHallEncPos(void);
 
 void (*ExcGetHall)(void) = &ExcGetHallEncPos; //Function Pointer
- 
-static void ExcGetHallEncPos(void){
-        LED_1 = ~LED_1;
-        LED_3 = ~LED_3;
-        
+
+
+static void ExcGetHallEncPos(void)
+{   
         uByte4 halltime;
         unsigned char DataWrite[hallDataLength];
         int i;
 
         halltime.lval = sclockGetTicks();
-        halldata.sval = encGetPos(); //encGetPos();
-        
+        In_hallData.lval = encGetPos(); //encGetPos() returns short(int) for input gear
+    
+        if(In_hallData.lval>past_In_hallData.lval)
+        {
+            rotation_cnt++;
+        }
+        if(rotation_cnt > 4)
+        {
+            Out_hallData.lval = In_hallData.lval/5;
+            rotation_cnt = 0;
+        }
+
+        else
+        {
+            Out_hallData.lval = rotation_cnt*3277 + In_hallData.lval/5; //3276.8= 2^14/5
+        }
+
+        past_In_hallData.lval = In_hallData.lval;
+
         for(i=0;i<4;i++)
         {
             DataWrite[i]=halltime.cval[i];
         }
-            DataWrite[4]=halldata.cval[0];
-            DataWrite[5]=halldata.cval[1];
+
+        for(i=4;i<8;i++){
+            DataWrite[i]=In_hallData.cval[i-4];
+        }
+
+        for(i=8;i<12;i++){
+            DataWrite[i]=Out_hallData.cval[i-8];
+        }
 
         if(numbytes*hallDataLength<= 264)
         {
             dfmemWrite (DataWrite, sizeof(DataWrite),hall_page, numbytes*hallDataLength, buf_idx);
-            hall_total_cnt.sval++;
+            //hall_total_cnt.sval++;
             numbytes++;
         }
+
         else
         {
             hall_page++;
             numbytes=0;
             dfmemWrite (DataWrite, sizeof(DataWrite), hall_page, numbytes, buf_idx);
-            hall_total_cnt.sval++;
+            //hall_total_cnt.sval++;
         }
+
 }
 
+//Handles the EXC carray Ususally internal sampling sensors
 void cmdHandleExcBuffer(void){
     void(*item)();
 
@@ -1088,23 +940,28 @@ void cmdHandleExcBuffer(void){
     return;
 }
 
-/*************************************************************************
-****************************************INTERRUPT7************************
-*************************************************************************/
-
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
-{
+{   
+    LED_1 = ~LED_1;
+    LED_3 = ~LED_3;
+
     if(samplehall)
     { 
         carrayAddTail(Exc,ExcGetHall);
+        hall_total_cnt.sval++;
     }
 
-    LED_1=~LED_1;
-
-    if (hall_total_cnt.sval>300)
+    if (hall_total_cnt.sval>=600)
     {
+
         samplehall = 0;
         T7CONbits.TON = 0;
+        LED_1=0;
+        LED_2=0;
+        LED_3=0;
+
     }
+
     _T7IF = 0;
 }
+
