@@ -25,6 +25,7 @@
 //#include "hall.h"
 
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
+#define FLASH_16MBIT_BYTES_PER_PAGE         528
 //#define ROBOT 0
 #define ROBOT 1
 
@@ -60,7 +61,7 @@ static int Wiiinvalid= 0;
 /*HALL ENCODER VARIABLES FOR ISR T7*/
 static unsigned char hallDataLength = 12;
 static unsigned long acc_HallAng = 0;
-static unsigned char buf_idx = 1;
+static unsigned char buf_idx = 2;
 static uByte4 In_hallData;
 static uByte4 past_In_hallData;
 static uByte4 Out_hallData;
@@ -195,16 +196,29 @@ static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigne
     // dfmemErasePage(0x303);
     // dfmemErasePage(0x304);
     // dfmemErasePage(0x305);
-	dfmemEraseBlock(0x300);
-	dfmemEraseBlock(0x308);
-    dfmemEraseBlock(0x316);
-    dfmemEraseBlock(0x324);
-    hall_page = 0x300;
-    numbytes = 0;
-    hall_total_cnt.sval =0;
-    past_In_hallData.lval =0;
-   	samplehall=1;
-    T7CONbits.TON = 1;
+	// dfmemEraseBlock(0x300);
+	// dfmemEraseBlock(0x308);
+ //    dfmemEraseBlock(0x316);
+ //    dfmemEraseBlock(0x324);
+ //    dfmemEraseBlock(0x332);
+    dfmemEraseBlock(0x250);
+    dfmemEraseBlock(0x258);
+    dfmemEraseBlock(0x266);
+    dfmemEraseBlock(0x274);
+    dfmemEraseBlock(0x282);
+    hall_page = 0x250;
+    if(frame[0])
+    {
+        numbytes = 0;
+        hall_total_cnt.sval =0;
+        past_In_hallData.lval =0;
+       	samplehall=1; //if it's 0, not getting sample, is 1, getting sample.
+        T7CONbits.TON = 1;
+    }
+    else{
+        samplehall=0;
+        T7CONbits.TON = 0;
+    }
     //halldata.sval= 0;
 }
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
@@ -302,7 +316,7 @@ static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigne
         while(read < num_samples + 100)
         {
             j = 0;
-            while (j + tx_data_size <= 264) {
+            while (j + tx_data_size <= 528) {
                 packet = radioRequestPacket(tx_data_size);
                 if(packet == NULL)
                 {
@@ -883,7 +897,9 @@ static void ExcGetHallEncPos(void)
     
         if(In_hallData.lval<past_In_hallData.lval)
         {
+            //if(past_In_hallData.lval-In_hallData.lval>60){
             rotation_cnt++;
+            //}
         }
         if(rotation_cnt>4)
         {
@@ -913,7 +929,7 @@ static void ExcGetHallEncPos(void)
             DataWrite[i]=Out_hallData.cval[i-8];
         }
 
-        if(numbytes*hallDataLength<= 264)
+        if(numbytes*hallDataLength<= 516) //528-12 = 516
         {
             dfmemWrite (DataWrite, sizeof(DataWrite),hall_page, numbytes*hallDataLength, buf_idx);
             //hall_total_cnt.sval++;
@@ -930,7 +946,7 @@ static void ExcGetHallEncPos(void)
 
 }
 
-//Handles the EXC carray Ususally internal sampling sensors
+//Handles the EXC carray Ususall yinternal sampling sensors
 void cmdHandleExcBuffer(void){
     void(*item)();
 
@@ -953,16 +969,16 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
         hall_total_cnt.sval++;
     }
 
-    if (hall_total_cnt.sval>=1500)
-    {
+    // if (hall_total_cnt.sval>=1500)
+    // {
 
-        samplehall = 0;
-        T7CONbits.TON = 0;
-        LED_1=0;
-        LED_2=0;
-        LED_3=0;
+    //     samplehall = 0;
+    //     T7CONbits.TON = 0;
+    //     LED_1=0;
+    //     LED_2=0;
+    //     LED_3=0;
 
-    }
+    // }
 
     _T7IF = 0;
 }

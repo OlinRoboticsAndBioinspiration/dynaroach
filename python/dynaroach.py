@@ -177,14 +177,14 @@ class DynaRoach(object):
 			datum = self.hall_encdata[1]#degrees
 			output = self.hall_encdata[2]
 			#print(datum)
-			print(time)
+			#print(time)
+			#print(self.data_cnt)
 			self.hall_times.append(time) #will be converted to seconds later
 			self.interm_state_data.append(datum)
-
 			self.output_state_data.append(output)
 			self.data_cnt += 1
-			if self.data_cnt % 1000 == 0:
-				print self.data_cnt, "/", self.last_sample_count
+			# if self.data_cnt % 1500 == 0:
+			# 	print self.data_cnt, "/", self.last_sample_count
 			
 		elif cmd.DATA_STREAMING:
 			if (len(data) == 35):
@@ -376,21 +376,23 @@ class DynaRoach(object):
 			self.test_hallenc(channel_num=1, duty_cycle=openspeed)
 			time.sleep(2)
 			
-	def test_hallenc(self, channel_num=1, duty_cycle=0.2):
+	def test_hallenc(self, channel_num=1, duty_cycle=0.13):
 		self.last_sample_count = 0
 		total_sample = 0
 		
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
 		cmd_data = channel+chr(int(duty_cycle*100))
-		
+		hallON = str(pack('h', int(1)))
+		hallOFF =str(pack('h', int(0)))
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		time.sleep(1)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,[])
-		time.sleep(4)#Delay between configenc-stopmotor
+		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallON)
+		time.sleep(5)#Delay between configenc-stopmotor
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
-		time.sleep(2)#Delay matters so that last sample gets all
-
+		time.sleep(0.2)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallOFF)
+		time.sleep(4)#Delay matters so that last sample gets all
 		if(self.last_sample_count == 0):
 			self.get_sample_count()
 			time.sleep(0.5)
@@ -409,39 +411,44 @@ class DynaRoach(object):
 			self.hall_avr_speed =[]
 			unroll= []
 			total_sample = self.last_sample_count #500 could be used but inaccurate
-			start_page = 0x300
+			start_page = 0x250
 			print("Transmitting saved data...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
 			
-			time.sleep(5)
+			time.sleep(15)
+			print(self.interm_state_data)
 			self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
 			self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
 			self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
-			tdelta = self.hall_times[2]-self.hall_times[1]
+			tdelta = self.hall_times[4]-self.hall_times[3]
 			unroll= np.diff(np.unwrap(self.output_state_data,180))
 			#self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
 			#speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
-			freq = 1/tdelta
+			#freq = 1/tdelta
 
 
 			fig = plt.figure()
 			ax1=fig.add_subplot(311)
 			ax2=fig.add_subplot(312)
 			ax3=fig.add_subplot(313)
-			ax1.plot(self.hall_times,self.interm_state_data,'b-')
-			ax1.set_xlim((self.hall_times[0], self.hall_times[total_sample-400]))
+			# print(self.hall_times)
+			# print(self.interm_state_data)
+			# print(self.output_state_data)
+			#ax1.plot(self.hall_times,self.interm_state_data,'b.')
+			ax1.plot(self.hall_times[:300],self.interm_state_data[:300],'b-')
+			#ax1.set_xlim((self.hall_times[0], self.hall_times[total_sample]))
 			ax1.set_ylim((0,400))
 			ax1.set_xlabel('Time(s)')
 			ax1.set_ylabel('degrees')
 			ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(total_sample,duty_cycle))
 			
-			
-			ax2.plot(self.hall_times,self.output_state_data,'b-')
-			ax2.set_xlim((self.hall_times[0], self.hall_times[total_sample-400]))
+			#ax2.plot(self.hall_times,self.output_state_data,'b.')
+			ax2.plot(self.hall_times[:300],self.output_state_data[:300],'b-')
+			#ax2.set_xlim((self.hall_times[0], self.hall_times[total_sample]))
 			ax2.set_ylim((0,400))
 			ax2.set_xlabel('Time(s)')
 			ax2.set_ylabel('degrees')
-			ax2.set_title('Output Gear position sampled at %.2f Hz' %(freq))
+			#ax2.set_title('Output Gear position sampled at %.2f Hz' %(freq))
 			
 			
 			# ax3.plot(self.hall_avr_speed[:total_sample-1],'ro')
@@ -461,8 +468,8 @@ class DynaRoach(object):
 			# hallfmt= "%s %s %s"
 			# np.savetxt(fname, np.transpose(self.hall_times, self.interm_state_data,self.output_state_data), hallfmt)
      		plt.savefig(name, bbox_inches='tight') # format='png')
-    		#time.sleep(1)
-    		#plt.close(fig)
+    		time.sleep(10)
+    		plt.close(fig)
 	
 		
 	def test_gyro(self):
