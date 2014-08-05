@@ -881,19 +881,21 @@ static void ExcGetHallEncPos(void)
         halltime.lval = sclockGetTicks();
         In_hallData.lval = encGetPos(); //encGetPos() returns short(int) for input gear
     
-        if(In_hallData.lval>past_In_hallData.lval)
+        if(In_hallData.lval<past_In_hallData.lval)
         {
             rotation_cnt++;
         }
         if(rotation_cnt>4)
         {
-            Out_hallData.lval = (16384-In_hallData.lval)/5;
+            Out_hallData.lval = In_hallData.lval/5;
+            //(16384-In_hallData.lval)/5;
             rotation_cnt = 0;
         }
 
         else
         {
-            Out_hallData.lval = 16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
+            Out_hallData.lval = rotation_cnt*3277+In_hallData.lval/5;
+            //16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
         }
 
         past_In_hallData.lval = In_hallData.lval;
@@ -951,7 +953,7 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
         hall_total_cnt.sval++;
     }
 
-    if (hall_total_cnt.sval>=600)
+    if (hall_total_cnt.sval>=1500)
     {
 
         samplehall = 0;
