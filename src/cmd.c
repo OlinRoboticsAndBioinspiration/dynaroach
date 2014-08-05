@@ -969,6 +969,14 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
         hall_total_cnt.sval++;
     }
 
+    if(hall_page==0x0400)
+    {
+        samplehall = 0;
+        T7CONbits.TON = 0;
+        LED_1=0;
+        LED_2=0;
+        LED_3=0;
+    }
     // if (hall_total_cnt.sval>=1500)
     // {
 
