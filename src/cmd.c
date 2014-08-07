@@ -59,16 +59,18 @@ static int readWiiData = 0;
 static int Wiiinvalid= 0;
 
 /*HALL ENCODER VARIABLES FOR ISR T7*/
-static unsigned char hallDataLength = 12;
-static unsigned long acc_HallAng = 0;
-static unsigned char buf_idx = 2;
-static uByte4 In_hallData;
-static uByte4 past_In_hallData;
-static uByte4 Out_hallData;
-static int samplehall= 0;
+#define HALLDATALENGTH 12
+#define GEARRATIO 5
+#define REVTOOUTPUT 3277
+static unsigned char buf_idx = 1;
+static uByte4 curr_halldata;
+static uByte4 prev_halldata;
+static uByte4 out_hallpos;
+static int sethall= 0;
 static uByte2 hall_total_cnt;
-static int numbytes=0;
-static int hall_page = 0;
+static uByte2 hall_mem_total_cnt;
+static int numsamples= 0;
+static int mem_pg_idx = 0;
 static unsigned char rotation_cnt=0;
 /**********************************/
 
@@ -129,7 +131,7 @@ static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned c
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame);
-static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
 //Delete these once trackable management code is working
@@ -175,7 +177,7 @@ void cmdSetup(void)
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_HALL_ENCODER] = &cmdHallEncoder;
     cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
-    cmd_func[CMD_CONFIG_HALLENC] = &ConfigureHallEnc;
+    cmd_func[CMD_CONFIG_HALLENC] = &cmdSetHallEnc;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -189,35 +191,30 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     send(status, 2, halldata.cval, CMD_HALL_ENCODER, last_addr);
     LED_2 = ~LED_2;
 }
-static void ConfigureHallEnc(unsigned char status, unsigned char length, unsigned char *frame){
-    // dfmemErasePage(0x300);
-    // dfmemErasePage(0x301);
-    // dfmemErasePage(0x302);
-    // dfmemErasePage(0x303);
-    // dfmemErasePage(0x304);
-    // dfmemErasePage(0x305);
-	// dfmemEraseBlock(0x300);
-	// dfmemEraseBlock(0x308);
- //    dfmemEraseBlock(0x316);
- //    dfmemEraseBlock(0x324);
- //    dfmemEraseBlock(0x332);
-    dfmemEraseBlock(0x250);
-    dfmemEraseBlock(0x258);
-    dfmemEraseBlock(0x266);
-    dfmemEraseBlock(0x274);
-    dfmemEraseBlock(0x282);
-    hall_page = 0x250;
+static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned char *frame){ 
+    int i;
+
     if(frame[0])
     {
-        numbytes = 0;
+        for(i=0x04A;i<0x63;i++)//Erase 200 worth of pages
+        {
+            dfmemEraseBlock(i);
+        }
+        delay_ms(1000);
+
+        mem_pg_idx = 0x250;
+        numsamples = 0;
         hall_total_cnt.sval =0;
-        past_In_hallData.lval =0;
-       	samplehall=1; //if it's 0, not getting sample, is 1, getting sample.
+        hall_mem_total_cnt.sval =0;
+        prev_halldata.lval =0;
+       	sethall=1; //if it's 0, not getting sample, is 1, getting sample.
         T7CONbits.TON = 1;
+        LED_1 = 1;
     }
     else{
-        samplehall=0;
+        sethall=0;
         T7CONbits.TON = 0;
+        LED_1 = 0;
     }
     //halldata.sval= 0;
 }
@@ -316,7 +313,7 @@ static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigne
         while(read < num_samples + 100)
         {
             j = 0;
-            while (j + tx_data_size <= 528) {
+            while (j + tx_data_size <= FLASH_16MBIT_BYTES_PER_PAGE) {
                 packet = radioRequestPacket(tx_data_size);
                 if(packet == NULL)
                 {
@@ -690,7 +687,9 @@ static void cmdGetSampleCount(unsigned char status, unsigned char length, unsign
     {
         frame[0] = hall_total_cnt.cval[0];
         frame[1] = hall_total_cnt.cval[1];
-        send(status, 2, frame, CMD_GET_SAMPLE_COUNT, last_addr);
+        frame[2] = hall_mem_total_cnt.cval[0];
+        frame[3] = hall_mem_total_cnt.cval[1];
+        send(status, 4, frame, CMD_GET_SAMPLE_COUNT, last_addr);
     }
 }
 
@@ -876,26 +875,26 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 static CircArray Exc;
 
 //SETTING UP THE CIRCUILAR ARRAY WITH MAX FUNC =10//
-void ExcSetup(){
+void excSetup(){
     Exc= carrayCreate(EXC_FUNC_MAX);
 }
 
 //Function Declaration//b
-static void ExcGetHallEncPos(void);
+static void excGetHallEncPos(void);
 
-void (*ExcGetHall)(void) = &ExcGetHallEncPos; //Function Pointer
+void (*excGetHall)(void) = &excGetHallEncPos; //Function Pointer
 
 
-static void ExcGetHallEncPos(void)
+static void excGetHallEncPos(void)
 {   
         uByte4 halltime;
-        unsigned char DataWrite[hallDataLength];
+        unsigned char DataWrite[HALLDATALENGTH];
         int i;
 
         halltime.lval = sclockGetTicks();
-        In_hallData.lval = encGetPos(); //encGetPos() returns short(int) for input gear
+        curr_halldata.lval = encGetPos(); //encGetPos() returns short(int) for input gear
     
-        if(In_hallData.lval<past_In_hallData.lval)
+        if(curr_halldata.lval<prev_halldata.lval)
         {
             //if(past_In_hallData.lval-In_hallData.lval>60){
             rotation_cnt++;
@@ -903,18 +902,18 @@ static void ExcGetHallEncPos(void)
         }
         if(rotation_cnt>4)
         {
-            Out_hallData.lval = In_hallData.lval/5;
+            out_hallpos.lval = curr_halldata.lval/GEARRATIO;
             //(16384-In_hallData.lval)/5;
             rotation_cnt = 0;
         }
 
         else
         {
-            Out_hallData.lval = rotation_cnt*3277+In_hallData.lval/5;
+            out_hallpos.lval = rotation_cnt*REVTOOUTPUT+curr_halldata.lval/GEARRATIO;
             //16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
         }
 
-        past_In_hallData.lval = In_hallData.lval;
+        prev_halldata.lval = curr_halldata.lval;
 
         for(i=0;i<4;i++)
         {
@@ -922,28 +921,26 @@ static void ExcGetHallEncPos(void)
         }
 
         for(i=4;i<8;i++){
-            DataWrite[i]=In_hallData.cval[i-4];
+            DataWrite[i]=curr_halldata.cval[i-4];
         }
 
         for(i=8;i<12;i++){
-            DataWrite[i]=Out_hallData.cval[i-8];
+            DataWrite[i]=out_hallpos.cval[i-8];
         }
 
-        if(numbytes*hallDataLength<= 516) //528-12 = 516
-        {
-            dfmemWrite (DataWrite, sizeof(DataWrite),hall_page, numbytes*hallDataLength, buf_idx);
-            //hall_total_cnt.sval++;
-            numbytes++;
-        }
+        dfmemWriteBuffer(DataWrite, HALLDATALENGTH, numsamples*HALLDATALENGTH, buf_idx);
+        numsamples++;
 
-        else
-        {
-            hall_page++;
-            numbytes=0;
-            dfmemWrite (DataWrite, sizeof(DataWrite), hall_page, numbytes, buf_idx);
-            //hall_total_cnt.sval++;
-        }
 
+        if(numsamples*HALLDATALENGTH >= FLASH_16MBIT_BYTES_PER_PAGE) 
+        {   
+            dfmemWrite(DataWrite, HALLDATALENGTH, mem_pg_idx, numsamples, buf_idx);
+            numsamples=0;
+            mem_pg_idx++;
+            hall_mem_total_cnt.sval++; //EveryTime one page worth of data was written increment one. 1pg= 44 samples
+
+        }
+        
 }
 
 //Handles the EXC carray Ususall yinternal sampling sensors
@@ -960,33 +957,22 @@ void cmdHandleExcBuffer(void){
 
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 {   
-    LED_1 = ~LED_1;
-    LED_3 = ~LED_3;
-
-    if(samplehall)
-    { 
-        carrayAddTail(Exc,ExcGetHall);
+    if(sethall)
+    {
+        carrayAddTail(Exc,excGetHall);
         hall_total_cnt.sval++;
     }
 
-    if(hall_page==0x0400)
+    //Not to make the data overflow
+    if(mem_pg_idx==0x0318) //Erases 8Blocks (8*8 =64) 0x250=592 (592+64=656 -> 0x290)
     {
-        samplehall = 0;
+        sethall = 0;
         T7CONbits.TON = 0;
         LED_1=0;
         LED_2=0;
         LED_3=0;
     }
-    // if (hall_total_cnt.sval>=1500)
-    // {
-
-    //     samplehall = 0;
-    //     T7CONbits.TON = 0;
-    //     LED_1=0;
-    //     LED_2=0;
-    //     LED_3=0;
-
-    // }
+    
 
     _T7IF = 0;
 }
