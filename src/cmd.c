@@ -81,7 +81,10 @@ static int readWiiData = 0;
 static int Wiiinvalid= 0;
 static unsigned int curr_blobsize =0;
 static unsigned int prev_blobsize =0;
+static unsigned int prev_blobxpos =0;
+static unsigned int curr_blobxpos =0;
 static float curr_speed =0.0;
+static WiiBlob ExcBlobs[4]; 
 
 
 unsigned int get_src_addr(void){
@@ -915,25 +918,31 @@ static void excProcessCamMotor(void)
     
     exc_wii_ptr = wiiReadData();
     delay_ms(100);
-    curr_blobsize = exc_wii_ptr[2] & 0xF;
+    // curr_blobsize = exc_wii_ptr[2] & 0xF;
+    curr_blobxpos = ((exc_wii_ptr[2] & 0x30)<<8) +(exc_wii_ptr[0]);
+    // if(curr_blobsize != 0xF && curr_blobsize !=0)
     if(curr_blobsize != 0xF && curr_blobsize !=0)
     {
-        if(curr_blobsize>prev_blobsize)
+        LED_1 = ~LED_1;
+        // if(curr_blobsize>prev_blobsize)
+        if (curr_blobxpos>prev_blobxpos )
         {
             curr_speed -= 0.2;
-            mcSetDutyCycle(1,curr_speed);
-            LED_1 =~LED_1;
+            //mcSetDutyCycle(1,curr_speed);
+            //LED_1 =~LED_1;
         }
-        if(curr_blobsize<prev_blobsize)
+        if(curr_blobxpos<prev_blobxpos)
         {
             curr_speed += 0.2;
-            mcSetDutyCycle(1,curr_speed);
-            LED_2 = ~LED_2;
+            //mcSetDutyCycle(1,curr_speed);
+            //LED_2 = ~LED_2;
         }
 
+        prev_blobxpos  = curr_blobxpos;
+        // prev_blobsize = curr_blobsize;
     }
-
-    prev_blobsize = curr_blobsize;
+    
+    
 }
 
 static void excGetHallEncPos(void)
@@ -1019,30 +1028,32 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 {   
     if(sethall)
     {
-        carrayAddTail(Exc,excGetHall);
+        // carrayAddTail(Exc,excGetHall);
         hall_total_cnt.sval++;
-        // if(hall_total_cnt.sval % 50 ==0)
-        // {
-        //     if(processcam)
-        //     {
-        //         carrayAddTail(Exc,excProcessCam);
-        //     }
+        if(hall_total_cnt.sval % 100 ==0)
+        {
+            if(processcam)
+            {
+                LED_3 = ~LED_3; 
+                carrayAddTail(Exc,excProcessCam);
+            }
             
         //     else
         //     {
         //         carrayAddTail(Exc,excGetCam);
         //     }
         // } 
+        }
     }
     //Not to make the data overflow
-    if(mem_pg_idx==0x0318) //Erases 8Blocks (8*8 =64) 0x250=592 (592+64=656 -> 0x290)
-    {
-        sethall = 0;
-        T7CONbits.TON = 0;
-        LED_1=0;
-        LED_2=0;
-        LED_3=0;
-    }
+    // if(mem_pg_idx==0x0318) //Erases 8Blocks (8*8 =64) 0x250=592 (592+64=656 -> 0x290)
+    // {
+    //     sethall = 0;
+    //     T7CONbits.TON = 0;
+    //     LED_1=0;
+    //     LED_2=0;
+    //     LED_3=0;
+    // }
     
 
     _T7IF = 0;
