@@ -86,19 +86,19 @@ static void timer2Setup(void)
 	_T2IE = 1;
 }
 
-// static void timer6Setup(void)
-// {
-// 	T6CONbits.TON = 0; // Disable Timer
-// 	T6CONbits.TCS = 0; // Select internal instruction cycle clock 
-// 	T6CONbits.TGATE = 0; // Disable Gated Timer mode
-// 	T6CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
-// 	TMR1 = 0x00; // Clear timer register
-// 	PR1 = 156000; // Load the period value (1125ms)
-// 	IPC11bits.T6IP = 0x04; //priority
-// 	IFS2bits.T6IF = 0; //Flag =0
-// 	IEC2bits.T6IE = 1; //Enable interrupt
-// 	T6CONbits.TON = 1; //Turn the timer on
-// }
+static void timer6Setup(void)
+{
+	T6CONbits.TON = 0; // Disable Timer
+	T6CONbits.TCS = 0; // Select internal instruction cycle clock 
+	T6CONbits.TGATE = 0; // Disable Gated Timer mode
+	T6CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
+	TMR6 = 0x00; // Clear timer register
+	PR6 = 156250; // Load the period value (500ms)
+	IPC11bits.T6IP = 0x04; //priority
+	IFS2bits.T6IF = 0; //Flag =0
+	IEC2bits.T6IE = 1; //Enable interrupt
+	T6CONbits.TON = 1; //Turn the timer on
+}
 
 // static void timer5Setup(void)
 // {
@@ -106,8 +106,8 @@ static void timer2Setup(void)
 // 	T5CONbits.TCS = 0; // Select internal instruction cycle clock 
 // 	T5CONbits.TGATE = 0; // Disable Gated Timer mode
 // 	T5CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
-// 	TMR1 = 0x00; // Clear timer register
-// 	PR1 = 1250; // Load the period value (.002 s) 
+// 	TMR5 = 0x00; // Clear timer register
+// 	PR5 = 1250; // Load the period value (.002 s) 
 // 	IPC7bits.T5IP = 0x04; //priority
 // 	IFS1bits.T5IF = 0; //Flag =0
 // 	IEC1bits.T5IE = 1; //Enable interrupt
@@ -119,9 +119,9 @@ static void timer7Setup(void)
 	T7CONbits.TON = 0; // Disable Timer
 	T7CONbits.TCS = 0; // Select internal instruction cycle clock 
 	T7CONbits.TGATE = 0; // Disable Gated Timer mode
-	T7CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
+	T7CONbits.TCKPS = 0b01; // Select 1:64 Prescaler
 	TMR7 = 0x00; // Clear timer register
-	PR7 = 0x04E2; //(unsigned int)0x04E2; // Load the period value (0.002s=500Hz) PR1= 0.002/(25e-9*8)-1
+	PR7 = 9999; //9999= 0.002/(25e-9*8)//0x04E2; //(unsigned int)0x04E2; // Load the period value (0.002s=500Hz) PR1= 0.002/(25e-9*64)-1
 	IPC12bits.T7IP = 0x04; //priority
 	IFS3bits.T7IF = 0; //Flag =0
 	IEC3bits.T7IE = 1; //Enable interrupt
@@ -199,13 +199,13 @@ int main ( void )
 	//END ADC SETUP
 
 	mcSetup();
-	gyroSetup();
+	//gyroSetup();
 	xlSetup();
 	dfmemSetup();
 	sclockSetup();
-	//timer1Setup();
-	//timer2Setup();
-	//timer5Setup();
+	// timer1Setup();
+	// timer2Setup();
+	timer6Setup();
 	timer7Setup();
 
 	cmdSetup();
@@ -221,23 +221,21 @@ int main ( void )
 		LED_3 = ~LED_3;
 		delay_ms(100);
 	}
-
-	delay_ms(1000);
-	LED_2 = 1;
+	LED_1 = ~LED_1;
 	delay_ms(1000);
 	encSetup();
-	ExcSetup();
-	LED_2 = ~LED_2;
-	//wiiSetupBasic();
+	wiiSetupBasic();
+	LED_1 = ~LED_1;
 
-	//set_zero();
+	excSetup();
+
 	char frame[5];
-
+	
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	send(STATUS_UNUSED, 5, frame, '4', network_basestation_addr);
 	//radioDeleteQueues();
-
+	LED_2 = ~LED_2;
 	while(1){
 		cmdHandleRadioRxBuffer();
 		radioProcess();

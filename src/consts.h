@@ -72,7 +72,7 @@
 #define CMD_RESET               0x1A
 #define CMD_ECHO                0x1F
 #define CMD_TX_HALLENC			0x1D
-#define CMD_CONFIG_HALLENC		0x1E
+#define CMD_SET_HALLENC			0x1E
 #define TIMER1_FCY          	250
 
 #endif

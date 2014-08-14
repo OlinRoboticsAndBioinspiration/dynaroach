@@ -55,11 +55,11 @@ static unsigned char st_cnt;
 static uByte2 sample_cnt;
 static int streamMod = 0;
 static int is_data_streaming = 0;
-static int readWiiData = 0;
-static int Wiiinvalid= 0;
+
 
 /*HALL ENCODER VARIABLES FOR ISR T7*/
 #define HALLDATALENGTH 12
+#define FULLROT 16384
 #define GEARRATIO 5
 #define REVTOOUTPUT 3277
 static unsigned char buf_idx = 1;
@@ -73,6 +73,16 @@ static int numsamples= 0;
 static int mem_pg_idx = 0;
 static unsigned char rotation_cnt=0;
 /**********************************/
+
+/*PROCESS CAM WITH WII*/
+static unsigned char * exc_wii_ptr;
+static int processcam = 0;
+static int readWiiData = 0;
+static int Wiiinvalid= 0;
+static unsigned int curr_blobsize =0;
+static unsigned int prev_blobsize =0;
+static float curr_speed =0.0;
+
 
 unsigned int get_src_addr(void){
     TBLPAG = 0x0;
@@ -177,7 +187,7 @@ void cmdSetup(void)
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_HALL_ENCODER] = &cmdHallEncoder;
     cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
-    cmd_func[CMD_CONFIG_HALLENC] = &cmdSetHallEnc;
+    cmd_func[CMD_SET_HALLENC] = &cmdSetHallEnc;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -199,9 +209,10 @@ static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned c
         for(i=0x04A;i<0x63;i++)//Erase 200 worth of pages
         {
             dfmemEraseBlock(i);
+             delay_ms(100);
         }
-        delay_ms(1000);
-
+       
+        processcam = 1; //TeSTING code
         mem_pg_idx = 0x250;
         numsamples = 0;
         hall_total_cnt.sval =0;
@@ -222,6 +233,7 @@ static void cmdSetMotor(unsigned char status, unsigned char length, unsigned cha
 {   
 	//Added on frame for purpose of test_sma (to take different channel other than 0
     LED_2 = ~LED_2;
+    curr_speed = (int)frame[1];
     mcSetDutyCycle(frame[0],frame[1]);//this is a different format from setSMA! frame[0]= channel frame[1]=duty cycle (python)
 }
 
@@ -313,7 +325,7 @@ static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigne
         while(read < num_samples + 100)
         {
             j = 0;
-            while (j + tx_data_size <= FLASH_16MBIT_BYTES_PER_PAGE) {
+            while (j + tx_data_size <= FLASH_8MBIT_BYTES_PER_PAGE) {
                 packet = radioRequestPacket(tx_data_size);
                 if(packet == NULL)
                 {
@@ -821,19 +833,24 @@ void motor_falling_edge() {
 }
 
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
-    WiiBlob Blobs[4]; 
-    //char wii_place[4] = {'0','0','0','0'};
 	unsigned char * wii_ptr; 
-    readWiiData =1;
-    Wiiinvalid =0;
-	//wiiGetData(Blobs);
-	while(readWiiData==1){
-		wii_ptr= wiiReadData();
-		delay_ms(100);
-		send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
-		if (wiiFindTarget(Blobs) == -1){
-		Wiiinvalid++;}
-		}
+    WiiBlob Blobs[4]; 
+    if(frame[0])
+    {
+        readWiiData =1;
+    }
+
+    while(readWiiData)
+    {
+    	wii_ptr= wiiReadData();
+        delay_ms(100);
+    	send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
+        if (wiiFindTarget(Blobs) == -1)
+        {
+            Wiiinvalid++;
+        }   
+    }
+
 }
 
 static int prevHall = 0;
@@ -857,7 +874,7 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 {
 
-	if(Wiiinvalid>=100){
+	if(Wiiinvalid>=10000){
 		readWiiData= 0;
 		MD_LED_1 = ~MD_LED_1; //When Motor Drive LED blinks, it means it has detected wiiinvalid blobs so many times so it stops sending.
 	}
@@ -881,9 +898,43 @@ void excSetup(){
 
 //Function Declaration//b
 static void excGetHallEncPos(void);
+static void excGetCamData(void);
+static void excProcessCamMotor(void);
 
 void (*excGetHall)(void) = &excGetHallEncPos; //Function Pointer
+void (*excGetCam)(void) = &excGetCamData;
+void (*excProcessCam)(void) = &excProcessCamMotor;
 
+static void excGetCamData(void)
+{
+    exc_wii_ptr = wiiReadData();
+    delay_ms(100);
+}
+static void excProcessCamMotor(void)
+{
+    
+    exc_wii_ptr = wiiReadData();
+    delay_ms(100);
+    curr_blobsize = exc_wii_ptr[2] & 0xF;
+    if(curr_blobsize != 0xF && curr_blobsize !=0)
+    {
+        if(curr_blobsize>prev_blobsize)
+        {
+            curr_speed -= 0.2;
+            mcSetDutyCycle(1,curr_speed);
+            LED_1 =~LED_1;
+        }
+        if(curr_blobsize<prev_blobsize)
+        {
+            curr_speed += 0.2;
+            mcSetDutyCycle(1,curr_speed);
+            LED_2 = ~LED_2;
+        }
+
+    }
+
+    prev_blobsize = curr_blobsize;
+}
 
 static void excGetHallEncPos(void)
 {   
@@ -894,22 +945,30 @@ static void excGetHallEncPos(void)
         halltime.lval = sclockGetTicks();
         curr_halldata.lval = encGetPos(); //encGetPos() returns short(int) for input gear
     
-        if(curr_halldata.lval<prev_halldata.lval)
+        if(curr_halldata.lval>prev_halldata.lval)
         {
+            if(curr_halldata.lval-prev_halldata.lval>60)
+            {
             //if(past_In_hallData.lval-In_hallData.lval>60){
-            rotation_cnt++;
+                rotation_cnt++;
+            }   
             //}
         }
         if(rotation_cnt>4)
         {
-            out_hallpos.lval = curr_halldata.lval/GEARRATIO;
+            //out_hallpos.lval = curr_halldata.lval/GEARRATIO;
+            out_hallpos.lval = (FULLROT-curr_halldata.lval)/GEARRATIO;
             //(16384-In_hallData.lval)/5;
             rotation_cnt = 0;
         }
 
         else
         {
-            out_hallpos.lval = rotation_cnt*REVTOOUTPUT+curr_halldata.lval/GEARRATIO;
+            if(prev_halldata.lval-curr_halldata.lval<FULLROT)
+            {
+                //out_hallpos.lval = (rotation_cnt*REVTOOUTPUT+curr_halldata.lval)/GEARRATIO;
+                out_hallpos.lval = FULLROT-(rotation_cnt*REVTOOUTPUT+(FULLROT-curr_halldata.lval)/GEARRATIO);
+            }
             //16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
         }
 
@@ -932,7 +991,7 @@ static void excGetHallEncPos(void)
         numsamples++;
 
 
-        if(numsamples*HALLDATALENGTH >= FLASH_16MBIT_BYTES_PER_PAGE) 
+        if(numsamples*HALLDATALENGTH >= FLASH_8MBIT_BYTES_PER_PAGE) 
         {   
             dfmemWrite(DataWrite, HALLDATALENGTH, mem_pg_idx, numsamples, buf_idx);
             numsamples=0;
@@ -956,13 +1015,25 @@ void cmdHandleExcBuffer(void){
 }
 
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
+
 {   
     if(sethall)
     {
         carrayAddTail(Exc,excGetHall);
         hall_total_cnt.sval++;
+        // if(hall_total_cnt.sval % 50 ==0)
+        // {
+        //     if(processcam)
+        //     {
+        //         carrayAddTail(Exc,excProcessCam);
+        //     }
+            
+        //     else
+        //     {
+        //         carrayAddTail(Exc,excGetCam);
+        //     }
+        // } 
     }
-
     //Not to make the data overflow
     if(mem_pg_idx==0x0318) //Erases 8Blocks (8*8 =64) 0x250=592 (592+64=656 -> 0x290)
     {

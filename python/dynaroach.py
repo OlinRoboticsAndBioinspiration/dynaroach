@@ -28,7 +28,7 @@ from matplotlib import pyplot as plt
 DEFAULT_BAUD_RATE = 230400
 
 #DEFAULT_DEST_ADDR = '\x00\x11'
-DEFAULT_DEST_ADDR = '\x00\x13'
+DEFAULT_DEST_ADDR = '\x00\x18'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
 
@@ -177,9 +177,10 @@ class DynaRoach(object):
 		elif typeID == cmd.WII_DUMP:
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
+			# print(self.wiidata)
 		elif typeID ==cmd.TX_HALLENC:
 			self.hall_encdata = unpack('<3L',data)
-			print(self.hall_encdata)
+			#print(self.hall_encdata)
 			time= self.hall_encdata[0] #in seconds
 			datum = self.hall_encdata[1]#degrees
 			output = self.hall_encdata[2]
@@ -187,9 +188,11 @@ class DynaRoach(object):
 			#print(datum)
 			#print(time)
 			#print(self.data_cnt)
-			self.hall_times.append(time) #will be converted to seconds later
-			self.interm_state_data.append(things)#things
-			self.output_state_data.append(output)
+			if(self.data_cnt % 44 != 4 or self.data_cnt % 44 != 5):
+				self.hall_times.append(time) #will be converted to seconds later
+				self.interm_state_data.append(datum)#things
+				self.output_state_data.append(output)
+			
 			self.data_cnt += 1
 			# if self.data_cnt % 1500 == 0:
 			# 	print self.data_cnt, "/", self.last_sample_count
@@ -379,12 +382,12 @@ class DynaRoach(object):
 		#self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SPEED,cmd_data)
 
 	def open_looptest(self):
-		for i in range(40):
-			openspeed = 0.1+0.02*i
+		for i in range(2):
+			openspeed = 0.8+0.1*i
 			self.test_hallenc(channel_num=1, duty_cycle=openspeed)
 			time.sleep(2)
 			
-	def test_hallenc(self, channel_num=1, duty_cycle=0.13):
+	def test_hallenc(self, channel_num=1, duty_cycle=0.4, sampling_time=3):
 		self.last_sample_count = 0
 		total_sample = 0
 		
@@ -397,9 +400,10 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallON)
-		time.sleep(2)#Delay between configenc-stopmotor
+		time.sleep(2.5)#Delay between configenc-stopmotor (2.5 sec is for deleting pages)
+		time.sleep(sampling_time)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallOFF)
-		time.sleep(4)
+		time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(1)
 		
@@ -425,40 +429,41 @@ class DynaRoach(object):
 			print("Transmitting saved data...")
 			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
 			
-			time.sleep(15)
+			time.sleep(30)
 
-			# self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
-			# self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
-			# self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
-			# tdelta = self.hall_times[4]-self.hall_times[3]
-			# unroll= np.diff(np.unwrap(self.output_state_data,180))
-			# self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
-			# speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
-			# freq = 1/tdelta
+			self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
+			self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
+			self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
+			tdelta = self.hall_times[4]-self.hall_times[3]
+			unroll= np.diff(np.unwrap(self.output_state_data,180))
+			self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
+			#speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
+			#freq = 1/tdelta
 			print(self.interm_state_data)
-			#print(self.hall_times)
-			# fig = plt.figure()
-			# ax1=fig.add_subplot(311)
-			# ax2=fig.add_subplot(312)
+			print(total_sample)
+			# print(self.hall_times)
+			fig = plt.figure()
+			ax1=fig.add_subplot(311)
+			ax2=fig.add_subplot(312)
 			# ax3=fig.add_subplot(313)
 			# # print(self.hall_times)
 			# # print(self.interm_state_data)
 			# # print(self.output_state_data)
-			# ax1.plot(self.hall_times,self.interm_state_data,'b-')
-			# #ax1.plot(self.hall_times[:300],self.interm_state_data[:300],'b-')
-			# ax1.set_xlim((self.hall_times[0], self.hall_times[total_sample]))
-			# ax1.set_ylim((0,400))
-			# ax1.set_xlabel('Time(s)')
-			# ax1.set_ylabel('degrees')
-			# ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(total_sample,duty_cycle))
+			#ax1.plot(self.interm_state_data,'b-')
+			ax1.plot(self.hall_times[:total_sample-500],self.interm_state_data[:total_sample-500],'b.')
+			ax1.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
+			ax1.set_ylim((0,400))
+			ax1.set_xlabel('Time(s)')
+			ax1.set_ylabel('degrees')
+			ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(total_sample,duty_cycle))
 			
-			# ax2.plot(self.hall_times,self.output_state_data,'b-')
+			ax2.plot(self.hall_times[:total_sample-500],self.output_state_data[:total_sample-500],'b.')
 			# #ax2.plot(self.hall_times[:300],self.output_state_data[:300],'b-')
-			# ax2.set_xlim((self.hall_times[0], self.hall_times[total_sample]))
-			# ax2.set_ylim((0,400))
-			# ax2.set_xlabel('Time(s)')
-			# ax2.set_ylabel('degrees')
-			# ax2.set_title('Output Gear position sampled at %.2f Hz' %(freq))
+			ax2.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
+			ax2.set_ylim((0,400))
+			ax2.set_xlabel('Time(s)')
+			ax2.set_ylabel('degrees')
+			ax2.set_title('Output Gear position')
 			
 			
 			# # ax3.plot(self.hall_avr_speed[:total_sample-1],'ro')
@@ -468,18 +473,18 @@ class DynaRoach(object):
 			# # ax3.set_ylabel('Hz')
 			# # ax3.set_title('Output Gear Average Speed. Speed of Robot = %.2f Hz'%speedo)
 		
-			# fig.tight_layout()
-			# fig.show()
+			fig.tight_layout()
+			fig.show()
 
 			# #hallarrays= np.array(self.hall_times, self.interm_state_data,self.output_state_data)
-			# name = "%.2f.png" % duty_cycle
+			name = "%.2f.png" % duty_cycle
 			# fname = "%.2f.txt" % duty_cycle
 
 			# # hallfmt= "%s %s %s"
 			# # np.savetxt(fname, np.transpose(self.hall_times, self.interm_state_data,self.output_state_data), hallfmt)
-   #   		plt.savefig(name, bbox_inches='tight') # format='png')
-   #  		time.sleep(10)
-   #  		plt.close(fig)
+     		plt.savefig(name, bbox_inches='tight') # format='png')
+    		time.sleep(5)
+    		plt.close(fig)
 	
 		
 	def test_gyro(self):
@@ -660,21 +665,18 @@ class DynaRoach(object):
 		
 	def test_sma(self):
 
-		print("Testing SMA. Please scope the right SMA channel (closest to the power connector).")
+		#print("Testing SMA. Please scope the right SMA channel (closest to the power connector).")
 		duty_cycle = 75 #75% on time
 		cmd_stop = chr(0)
 		cmd_duty_cycle = chr(duty_cycle)
-		sides = ["right", "left"]
+		sides = ["left","right"]
 
 		for i in range (0,2):
-			print("Please scope the "+sides[i]+ " SMA channel.")
+			#print("Please scope the "+sides[i]+ " SMA channel.")
 			cmd_side = chr(i)
+			#self.radio.send(cmd.STATUS_UNUSED, cmd.SET_SMA, cmd_side+cmd_duty_cycle)
 			self.radio.send(cmd.STATUS_UNUSED, cmd.SET_SMA, cmd_side+cmd_duty_cycle)
-			time.sleep(2.5)
-			print("If the "+sides[i]+ " channel is showing a square wave, SMA is working.")
-			time.sleep(2.5)
-			self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SMA, cmd_side+cmd_stop)
-	
+			
 	#WII DUMP=  Tells where the LEDs. Updates every 1ms)
 	def wii_dump(self):
 		i=0
@@ -683,7 +685,7 @@ class DynaRoach(object):
 		mw.resize(1024,1024)
 		view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
 		mw.setCentralWidget(view)
-		#mw.show()
+		mw.show()
 		mw.setWindowTitle('WiiData')
 		box = view.addPlot()
 		wii= pg.ScatterPlotItem(size=10, brush=pg.mkBrush(255, 255, 255, 120)) #, clear= False)
@@ -699,7 +701,7 @@ class DynaRoach(object):
 		sclx=1
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
-		while(self.num_obs %100):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
+		while(self.wiidata!=None):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
 			print('capture'+str(i))
 			for j in range(4):
 				ind = 3*j
@@ -714,14 +716,14 @@ class DynaRoach(object):
 					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
 			#print(sread)
 
-			self.dot_pos = self.dot_pos * STATE_TRAN
-			self.error = self.error + PROCESS_COV
-			m_gain = self.error/(self.error + MEAS_COV)
-			self.dot_pos = self.dot_pos + m_gain*(b[0,0]- self.dot_pos)
-			self.error = (1-m_gain)*self.error
+			# self.dot_pos = self.dot_pos * STATE_TRAN
+			# self.error = self.error + PROCESS_COV
+			# m_gain = self.error/(self.error + MEAS_COV)
+			# self.dot_pos = self.dot_pos + m_gain*(b[0,0]- self.dot_pos)
+			# self.error = (1-m_gain)*self.error
 
 			wii.addPoints(x=b[:,0],y=b[:,1],size=b[:,2]*2,brush='b') # pen='w', brush='b'
-			wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
+			# wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
 			box.addItem(wii)
 			box.setXRange(0,1024,update= False)
 			box.setYRange(0,1024,update= False)
