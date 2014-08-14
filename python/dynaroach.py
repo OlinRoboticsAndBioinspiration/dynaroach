@@ -397,94 +397,94 @@ class DynaRoach(object):
 		hallON = str(pack('h', int(1)))
 		hallOFF =str(pack('h', int(0)))
 
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
-		time.sleep(1)
+		# self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
+		# time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallON)
 		time.sleep(2.5)#Delay between configenc-stopmotor (2.5 sec is for deleting pages)
 		time.sleep(sampling_time)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallOFF)
+		# self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallOFF)
 		time.sleep(1)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
+		# self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(1)
 		
-		if(self.last_sample_count == 0):
-			self.get_sample_count()
-			time.sleep(0.5)
+		# if(self.last_sample_count == 0):
+		# 	self.get_sample_count()
+		# 	time.sleep(0.5)
 
-		if(self.last_sample_count == 0):
-			print("There is no previously saved data.")
-			return
+		# if(self.last_sample_count == 0):
+		# 	print("There is no previously saved data.")
+		# 	return
 
-		else:
-			self.data_cnt = 0
-			tdelta= 0
-			self.hall_encdata = []
-			self.interm_state_data = []
-			self.output_state_data=[]
-			self.hall_times= []
-			self.hall_avr_speed =[]
-			unroll= []
-			total_sample = self.last_sample_count #500 could be used but inaccurate
-			start_page = 0x250
-			print("Transmitting saved data...")
-			self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
+		# else:
+		# 	self.data_cnt = 0
+		# 	tdelta= 0
+		# 	self.hall_encdata = []
+		# 	self.interm_state_data = []
+		# 	self.output_state_data=[]
+		# 	self.hall_times= []
+		# 	self.hall_avr_speed =[]
+		# 	unroll= []
+		# 	total_sample = self.last_sample_count #500 could be used but inaccurate
+		# 	start_page = 0x250
+		# 	print("Transmitting saved data...")
+		# 	self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
 			
-			time.sleep(30)
+		# 	time.sleep(30)
 
-			self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
-			self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
-			self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
-			tdelta = self.hall_times[4]-self.hall_times[3]
-			unroll= np.diff(np.unwrap(self.output_state_data,180))
-			self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
-			#speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
-			#freq = 1/tdelta
-			print(self.interm_state_data)
-			print(total_sample)
-			# print(self.hall_times)
-			fig = plt.figure()
-			ax1=fig.add_subplot(311)
-			ax2=fig.add_subplot(312)
-			# ax3=fig.add_subplot(313)
+			# self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
+			# self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
+			# self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
+			# tdelta = self.hall_times[4]-self.hall_times[3]
+			# unroll= np.diff(np.unwrap(self.output_state_data,180))
+			# self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
+			# #speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
+			# #freq = 1/tdelta
+			# print(self.interm_state_data)
+			# print(total_sample)
 			# # print(self.hall_times)
-			# # print(self.interm_state_data)
-			# # print(self.output_state_data)
-			#ax1.plot(self.interm_state_data,'b-')
-			ax1.plot(self.hall_times[:total_sample-500],self.interm_state_data[:total_sample-500],'b.')
-			ax1.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
-			ax1.set_ylim((0,400))
-			ax1.set_xlabel('Time(s)')
-			ax1.set_ylabel('degrees')
-			ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(total_sample,duty_cycle))
+			# fig = plt.figure()
+			# ax1=fig.add_subplot(311)
+			# ax2=fig.add_subplot(312)
+			# # ax3=fig.add_subplot(313)
+			# # # print(self.hall_times)
+			# # # print(self.interm_state_data)
+			# # # print(self.output_state_data)
+			# #ax1.plot(self.interm_state_data,'b-')
+			# ax1.plot(self.hall_times[:total_sample-500],self.interm_state_data[:total_sample-500],'b.')
+			# ax1.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
+			# ax1.set_ylim((0,400))
+			# ax1.set_xlabel('Time(s)')
+			# ax1.set_ylabel('degrees')
+			# ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(total_sample,duty_cycle))
 			
-			ax2.plot(self.hall_times[:total_sample-500],self.output_state_data[:total_sample-500],'b.')
-			# #ax2.plot(self.hall_times[:300],self.output_state_data[:300],'b-')
-			ax2.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
-			ax2.set_ylim((0,400))
-			ax2.set_xlabel('Time(s)')
-			ax2.set_ylabel('degrees')
-			ax2.set_title('Output Gear position')
+			# ax2.plot(self.hall_times[:total_sample-500],self.output_state_data[:total_sample-500],'b.')
+			# # #ax2.plot(self.hall_times[:300],self.output_state_data[:300],'b-')
+			# ax2.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
+			# ax2.set_ylim((0,400))
+			# ax2.set_xlabel('Time(s)')
+			# ax2.set_ylabel('degrees')
+			# ax2.set_title('Output Gear position')
 			
 			
-			# # ax3.plot(self.hall_avr_speed[:total_sample-1],'ro')
-			# # #plt.xlim((self.hall_times[0], self.hall_times[total_sample]))
-			# # ax3.set_ylim((0,20))
-			# # ax3.set_xlabel('Num of samples')
-			# # ax3.set_ylabel('Hz')
-			# # ax3.set_title('Output Gear Average Speed. Speed of Robot = %.2f Hz'%speedo)
+			# # # ax3.plot(self.hall_avr_speed[:total_sample-1],'ro')
+			# # # #plt.xlim((self.hall_times[0], self.hall_times[total_sample]))
+			# # # ax3.set_ylim((0,20))
+			# # # ax3.set_xlabel('Num of samples')
+			# # # ax3.set_ylabel('Hz')
+			# # # ax3.set_title('Output Gear Average Speed. Speed of Robot = %.2f Hz'%speedo)
 		
-			fig.tight_layout()
-			fig.show()
+			# fig.tight_layout()
+			# fig.show()
 
-			# #hallarrays= np.array(self.hall_times, self.interm_state_data,self.output_state_data)
-			name = "%.2f.png" % duty_cycle
-			# fname = "%.2f.txt" % duty_cycle
+			# # #hallarrays= np.array(self.hall_times, self.interm_state_data,self.output_state_data)
+			# name = "%.2f.png" % duty_cycle
+			# # fname = "%.2f.txt" % duty_cycle
 
-			# # hallfmt= "%s %s %s"
-			# # np.savetxt(fname, np.transpose(self.hall_times, self.interm_state_data,self.output_state_data), hallfmt)
-     		plt.savefig(name, bbox_inches='tight') # format='png')
-    		time.sleep(5)
-    		plt.close(fig)
+			# # # hallfmt= "%s %s %s"
+			# # # np.savetxt(fname, np.transpose(self.hall_times, self.interm_state_data,self.output_state_data), hallfmt)
+   #   		plt.savefig(name, bbox_inches='tight') # format='png')
+   #  		time.sleep(5)
+   #  		plt.close(fig)
 	
 		
 	def test_gyro(self):
