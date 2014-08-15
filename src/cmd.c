@@ -131,7 +131,6 @@ static void cmdTestAccel(unsigned char status, unsigned char length, unsigned ch
 static void cmdTestGyro(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdTestDflash(unsigned char status, unsigned char length, unsigned char* data);
 static void cmdEraseMemSector(unsigned char status, unsigned char length, unsigned char *frame);
-static void cmdTestHall(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdTestBatt(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdTestSweep(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdGetSampleCount(unsigned char status, unsigned char length, unsigned char *frame);
@@ -176,7 +175,6 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_ACCEL] = &cmdTestAccel;
     cmd_func[CMD_TEST_GYRO] = &cmdTestGyro;
     cmd_func[CMD_TEST_DFLASH] = &cmdTestDflash;
-    cmd_func[CMD_TEST_HALL] = &cmdTestHall;
     cmd_func[CMD_TEST_BATT] = &cmdTestBatt;
     cmd_func[CMD_ERASE_MEM_SECTOR] = &cmdEraseMemSector;
     cmd_func[CMD_GET_SAMPLE_COUNT] = &cmdGetSampleCount;
@@ -188,14 +186,14 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
-    cmd_func[CMD_HALL_ENCODER] = &cmdHallEncoder;
+    cmd_func[CMD_HALL_ENCODER] = &cmdHallCurrentPos;
     cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
     cmd_func[CMD_SET_HALLENC] = &cmdSetHallEnc;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
 
-static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame){
+static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame){
 
     LED_2 = ~LED_2;
     uByte2 halldata;
@@ -204,6 +202,7 @@ static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned 
     send(status, 2, halldata.cval, CMD_HALL_ENCODER, last_addr);
     LED_2 = ~LED_2;
 }
+
 static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned char *frame){ 
     int i;
 
@@ -572,22 +571,6 @@ static void cmdTestGyro(unsigned char status, unsigned char length, unsigned cha
     LED_1 = OFF;
 }
 
-/*****************************************************************************
-* Function Name : cmdTestHall
-* Description   : For 10 seconds, set the state of LED_2 based on the state
-*                 of the Hall effect sensor connected to RB7. User needs
-*                 to manually try to switch the state of the Hall effect
-*                 sensor. Current hardware implementation uses a latched
-*                 Hall (Melexis US1881).
-* Parameters    : status - Status field of gyro test packet (not yet used)
-*                 length - The length of the payload data array
-*                 frame - not used
-*****************************************************************************/
-static void cmdTestHall(unsigned char status, unsigned char length, unsigned char* frame)
-{
-    return;
-}
-
 static void cmdTestBatt(unsigned char status, unsigned char length, unsigned char* frame)
 {
     uByte2 v_batt;
@@ -893,6 +876,7 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 
 //CREATE CIRCULAR ARRAY//
 static CircArray Exc;
+static unsigned char DataWrite[HALLDATALENGTH];
 
 //SETTING UP THE CIRCUILAR ARRAY WITH MAX FUNC =10//
 void excSetup(){
@@ -903,16 +887,43 @@ void excSetup(){
 static void excGetHallEncPos(void);
 static void excGetCamData(void);
 static void excProcessCamMotor(void);
+static void excRecordData(void);
 
 void (*excGetHall)(void) = &excGetHallEncPos; //Function Pointer
 void (*excGetCam)(void) = &excGetCamData;
 void (*excProcessCam)(void) = &excProcessCamMotor;
+void (*excRecord)(void) = &excRecordData;
 
 static void excGetCamData(void)
 {
     exc_wii_ptr = wiiReadData();
-    delay_ms(100);
+    LED_3 = ~LED_3;
+    // int i;
+    // for (i = 0; i <12;i++)
+    // {
+    //     DataWrite[i] = *(exc_wii_ptr+i);
+    // }
+    // delay_ms(100);
+
+    send(1, 12, exc_wii_ptr, CMD_WII_DUMP,last_addr);
+    //excRecordData();
 }
+
+static void excRecordData(void)
+{
+        dfmemWriteBuffer(DataWrite, HALLDATALENGTH, numsamples*HALLDATALENGTH, buf_idx);
+        numsamples++;
+        LED_3 = ~LED_3;
+
+        if(numsamples*HALLDATALENGTH >= FLASH_8MBIT_BYTES_PER_PAGE) 
+        {   
+            dfmemWrite(DataWrite, HALLDATALENGTH, mem_pg_idx, numsamples, buf_idx);
+            numsamples=0;
+            mem_pg_idx++;
+            hall_mem_total_cnt.sval++; //EveryTime one page worth of data was written increment one. 1pg= 44 samples
+        }       
+}
+
 static void excProcessCamMotor(void)
 {
     
@@ -941,77 +952,62 @@ static void excProcessCamMotor(void)
         prev_blobxpos  = curr_blobxpos;
         // prev_blobsize = curr_blobsize;
     }
-    
-    
+      
 }
 
 static void excGetHallEncPos(void)
-{   
-        uByte4 halltime;
-        unsigned char DataWrite[HALLDATALENGTH];
-        int i;
+{  
+    uByte4 halltime;
+    int i;
 
-        halltime.lval = sclockGetTicks();
-        curr_halldata.lval = encGetPos(); //encGetPos() returns short(int) for input gear
-    
-        if(curr_halldata.lval>prev_halldata.lval)
+    halltime.lval = sclockGetTicks();
+    curr_halldata.lval = encGetPos(); //encGetPos() returns short(int) for input gear
+
+    if(curr_halldata.lval>prev_halldata.lval)
+    {
+        if(curr_halldata.lval-prev_halldata.lval>60)
         {
-            if(curr_halldata.lval-prev_halldata.lval>60)
-            {
-            //if(past_In_hallData.lval-In_hallData.lval>60){
-                rotation_cnt++;
-            }   
-            //}
-        }
-        if(rotation_cnt>4)
+        //if(past_In_hallData.lval-In_hallData.lval>60){
+            rotation_cnt++;
+        }   
+        //}
+    }
+    if(rotation_cnt>4)
+    {
+        //out_hallpos.lval = curr_halldata.lval/GEARRATIO;
+        out_hallpos.lval = (FULLROT-curr_halldata.lval)/GEARRATIO;
+        //(16384-In_hallData.lval)/5;
+        rotation_cnt = 0;
+    }
+
+    else
+    {
+        if(prev_halldata.lval-curr_halldata.lval<FULLROT)
         {
-            //out_hallpos.lval = curr_halldata.lval/GEARRATIO;
-            out_hallpos.lval = (FULLROT-curr_halldata.lval)/GEARRATIO;
-            //(16384-In_hallData.lval)/5;
-            rotation_cnt = 0;
+            //out_hallpos.lval = (rotation_cnt*REVTOOUTPUT+curr_halldata.lval)/GEARRATIO;
+            out_hallpos.lval = FULLROT-(rotation_cnt*REVTOOUTPUT+(FULLROT-curr_halldata.lval)/GEARRATIO);
         }
+        //16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
+    }
 
-        else
-        {
-            if(prev_halldata.lval-curr_halldata.lval<FULLROT)
-            {
-                //out_hallpos.lval = (rotation_cnt*REVTOOUTPUT+curr_halldata.lval)/GEARRATIO;
-                out_hallpos.lval = FULLROT-(rotation_cnt*REVTOOUTPUT+(FULLROT-curr_halldata.lval)/GEARRATIO);
-            }
-            //16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
-        }
+    prev_halldata.lval = curr_halldata.lval;
 
-        prev_halldata.lval = curr_halldata.lval;
+    for(i=0;i<4;i++)
+    {
+        DataWrite[i]=halltime.cval[i];
+    }
 
-        for(i=0;i<4;i++)
-        {
-            DataWrite[i]=halltime.cval[i];
-        }
+    for(i=4;i<8;i++){
+        DataWrite[i]=curr_halldata.cval[i-4];
+    }
 
-        for(i=4;i<8;i++){
-            DataWrite[i]=curr_halldata.cval[i-4];
-        }
+    for(i=8;i<12;i++){
+        DataWrite[i]=out_hallpos.cval[i-8];
+    }
 
-        for(i=8;i<12;i++){
-            DataWrite[i]=out_hallpos.cval[i-8];
-        }
-
-        dfmemWriteBuffer(DataWrite, HALLDATALENGTH, numsamples*HALLDATALENGTH, buf_idx);
-        numsamples++;
-
-
-        if(numsamples*HALLDATALENGTH >= FLASH_8MBIT_BYTES_PER_PAGE) 
-        {   
-            dfmemWrite(DataWrite, HALLDATALENGTH, mem_pg_idx, numsamples, buf_idx);
-            numsamples=0;
-            mem_pg_idx++;
-            hall_mem_total_cnt.sval++; //EveryTime one page worth of data was written increment one. 1pg= 44 samples
-
-        }
-        
 }
 
-//Handles the EXC carray Ususall yinternal sampling sensors
+//Handles the EXC carray (internal sampling sensors)
 void cmdHandleExcBuffer(void){
     void(*item)();
 
@@ -1028,22 +1024,24 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 {   
     if(sethall)
     {
-        // carrayAddTail(Exc,excGetHall);
+        carrayAddTail(Exc,excGetHall);
+        carrayAddTail(Exc, excRecord);
         hall_total_cnt.sval++;
         if(hall_total_cnt.sval % 100 ==0)
         {
             if(processcam)
             {
-                LED_3 = ~LED_3; 
-                carrayAddTail(Exc,excProcessCam);
+                carrayAddTail(Exc,excGetCam);
+                LED_2 = ~LED_2;
             }
+        }
             
         //     else
         //     {
         //         carrayAddTail(Exc,excGetCam);
         //     }
         // } 
-        }
+        // }
     }
     //Not to make the data overflow
     // if(mem_pg_idx==0x0318) //Erases 8Blocks (8*8 =64) 0x250=592 (592+64=656 -> 0x290)

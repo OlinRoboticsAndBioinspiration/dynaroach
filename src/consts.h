@@ -39,7 +39,6 @@
 #define CMD_TEST_DFLASH             0x03
 #define CMD_TEST_MOTOR              0x04
 #define CMD_TEST_SMA                0x05
-#define CMD_TEST_HALL               0x06
 #define CMD_TEST_BATT               0x07
 #define CMD_ERASE_MEM_SECTOR        0x08
 #define CMD_GET_SAMPLE_COUNT        0x09
@@ -48,7 +47,7 @@
 #define CMD_TEST_SWEEP              0x0C
 #define CMD_GET_BACK_EMF			0x0D
 #define CMD_WII_DUMP				0x0E//Todo: move these.  They really aren't for testing.
-#define CMD_HALL_ENCODER			0x0F
+#define CMD_HALL_CURRENT_POS		0x0F
 
 #define TEST_PACKET_INTERVAL_MS 1000
 #define NUM_TEST_PACKETS        1

@@ -200,7 +200,7 @@ int main ( void )
 
 	mcSetup();
 	//gyroSetup();
-	xlSetup();
+	//xlSetup();
 	dfmemSetup();
 	sclockSetup();
 	// timer1Setup();
@@ -240,7 +240,6 @@ int main ( void )
 		cmdHandleRadioRxBuffer();
 		radioProcess();
 		cmdHandleExcBuffer();
-
 	}
 }
 

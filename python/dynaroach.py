@@ -132,6 +132,7 @@ class DynaRoach(object):
 		self.error = 0
 
 		self.num_obs = 1
+		self.has_new_wiidata = False
 
 	def add_receive_callback(self, callback):
 		self.receive_callback.append(callback)
@@ -147,7 +148,7 @@ class DynaRoach(object):
 			self.acc_res = unpack('<3h', data)
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
-		elif typeID == cmd.HALL_ENCODER:
+		elif typeID == cmd.HALL_CURRENT_POS:
 			self.hall_enc = unpack('<h',data)
 			print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
@@ -177,7 +178,9 @@ class DynaRoach(object):
 		elif typeID == cmd.WII_DUMP:
 			self.num_obs = self.num_obs+1
 			self.wiidata = unpack('12B',data)
-			# print(self.wiidata)
+			self.has_new_wiidata = True
+			print(self.wiidata)
+			print("wii")
 		elif typeID ==cmd.TX_HALLENC:
 			self.hall_encdata = unpack('<3L',data)
 			#print(self.hall_encdata)
@@ -194,6 +197,7 @@ class DynaRoach(object):
 				self.output_state_data.append(output)
 			
 			self.data_cnt += 1
+			print(things)
 			# if self.data_cnt % 1500 == 0:
 			# 	print self.data_cnt, "/", self.last_sample_count
 			
@@ -321,41 +325,8 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.GET_GYRO_CALIB_PARAM, [])
 		self.gyro_offsets = None
 
-	def hallenc(self, channel_num=1, duty_cycle=0.5):
-
-		data = ''.join(chr(0) for i in range(2))
-		channel = chr(channel_num)
-		cmd_stop = channel + chr(0)
-		cmd_data = channel+chr(int(duty_cycle*100))
-
-		self.hall_enc = None
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
-		time.sleep(1)
-
-		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
-		time.sleep(3)
-		#print(self.hall_enc)
-		#MSB= bin(self.hall_enc[0])[2:].zfill(8)
-		#LSB= bin(self.hall_enc[1])[2:].zfill(8)
-		#r1= MSB[:8]+LSB[2:8]
-
-		#self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_ENCODER,[])
-		#time.sleep(3)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
-		time.sleep(2)
-
-		
-
-		#MSB= bin(self.hall_enc[0])[2:].zfill(8)
-		#LSB= bin(self.hall_enc[1])[2:].zfill(8)
-		#r2= MSB[:8]+LSB[2:8]
-
-		# last_angle = int(r1,2) * HALL_DEGREES_PER_LSB
-		# angle = int(r2,2) * HALL_DEGREES_PER_LSB
-		# delta = abs(last_angle - angle)
-		# revs = delta/360
-		# freq = revs/3
-		# print(freq)
+	def hall_current_pos(self):
+		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_CURRENT_POS,[])
 
 	def hall_speed_test(self):
 		speeds = [0]*90
@@ -399,10 +370,15 @@ class DynaRoach(object):
 
 		# self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		# time.sleep(1)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallON)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallON)
 		time.sleep(2.5)#Delay between configenc-stopmotor (2.5 sec is for deleting pages)
 		time.sleep(sampling_time)
-		# self.radio.send(cmd.STATUS_UNUSED, cmd.CONFIG_ENCODER,hallOFF)
+		#command is repeated to ensure that sampling stops
+		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallOFF)
+		time.sleep(.1)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallOFF)
+		time.sleep(.1)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallOFF)
 		time.sleep(1)
 		# self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(1)
@@ -425,9 +401,9 @@ class DynaRoach(object):
 		# 	self.hall_avr_speed =[]
 		# 	unroll= []
 		# 	total_sample = self.last_sample_count #500 could be used but inaccurate
-		# 	start_page = 0x250
+		start_page = 0x250
 		# 	print("Transmitting saved data...")
-		# 	self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
+		self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
 			
 		# 	time.sleep(30)
 
@@ -689,12 +665,7 @@ class DynaRoach(object):
 		mw.setWindowTitle('WiiData')
 		box = view.addPlot()
 		wii= pg.ScatterPlotItem(size=10, brush=pg.mkBrush(255, 255, 255, 120)) #, clear= False)
-		#plt.ion()
-		#fig = plt.figure()
-		#ax1 = fig.add_subplot(111)
-		#plt.show()
-		#data = np.random.normal(size=(50,500), scale=100)
-		#sizeArray = (np.random.random(500) * 20.).astype(int)
+
 		b= np.zeros(shape =(4,3))
 		self.wiidata = [0]*12
 		sclb=1 #0.35294
@@ -702,34 +673,30 @@ class DynaRoach(object):
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
 		while(self.wiidata!=None):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
-			print('capture'+str(i))
-			for j in range(4):
-				ind = 3*j
-				#sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
-				sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
-				#print sread
-				b[j] = [int((sread[2][2:4]+sread[0]),2),int((sread[2][:2]+sread[1]),2),int(sread[2][4:8],2)]
-				if b[j][0] == 1023: #Invalid Blob will hit 'blob x not found print
-					#print('blob'+' '+str(j+1)+' '+'not found')
-					b[j][2]=0
-				else:
-					print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
-			#print(sread)
+			if(self.has_new_wiidata):
+				print('capture'+str(i))
+				for j in range(4):
+					ind = 3*j
+					#sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
+					sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
+					#print sread
+					b[j] = [int((sread[2][2:4]+sread[0]),2),int((sread[2][:2]+sread[1]),2),int(sread[2][4:8],2)]
+					if b[j][0] == 1023: #Invalid Blob will hit 'blob x not found print
+						#print('blob'+' '+str(j+1)+' '+'not found')
+						b[j][2]=0
+					else:
+						print('blob'+' '+str(j+1)+' '+'is at'+str(b[j][0:2])+" with size "+str(b[j][2]))
 
-			# self.dot_pos = self.dot_pos * STATE_TRAN
-			# self.error = self.error + PROCESS_COV
-			# m_gain = self.error/(self.error + MEAS_COV)
-			# self.dot_pos = self.dot_pos + m_gain*(b[0,0]- self.dot_pos)
-			# self.error = (1-m_gain)*self.error
+				wii.addPoints(x=b[:,0],y=b[:,1],size=b[:,2]*2,brush='b') # pen='w', brush='b'
+				# wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
+				box.addItem(wii)
+				box.setXRange(0,1024,update= False)
+				box.setYRange(0,1024,update= False)
+				pg.QtGui.QApplication.processEvents()
+				wii.clear()
+				i+=1
 
-			wii.addPoints(x=b[:,0],y=b[:,1],size=b[:,2]*2,brush='b') # pen='w', brush='b'
-			# wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
-			box.addItem(wii)
-			box.setXRange(0,1024,update= False)
-			box.setYRange(0,1024,update= False)
-			pg.QtGui.QApplication.processEvents()
-			wii.clear()
-			i+=1
+				self.has_new_wiidata = False
 
 			#plt.scatter(b[:,0],b[:,1],s= b[:,2]*10, c= 'b', label='real data')
 			#plt.scatter(self.dot_pos, b[0][1], s= 20, c='r', label= 'filtered') # since we are only doing x coordinate (1d) we used measured y data
