@@ -76,14 +76,14 @@ static unsigned char rotation_cnt=0;
 
 /*PROCESS CAM WITH WII*/
 static unsigned char * exc_wii_ptr;
-static int processcam = 0;
+static int sendCamData = 0;
 static int readWiiData = 0;
 static int Wiiinvalid= 0;
 static unsigned int curr_blobsize =0;
 static unsigned int prev_blobsize =0;
 static unsigned int prev_blobxpos =0;
 static unsigned int curr_blobxpos =0;
-static float curr_speed =0.0;
+static float curr_speed =0.3;
 static WiiBlob ExcBlobs[4]; 
 
 
@@ -142,7 +142,7 @@ static void cmdReset(unsigned char status, unsigned char length, unsigned char *
 static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame);
-static void cmdHallEncoder(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
@@ -186,7 +186,7 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
-    cmd_func[CMD_HALL_ENCODER] = &cmdHallCurrentPos;
+    cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
     cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
     cmd_func[CMD_SET_HALLENC] = &cmdSetHallEnc;
     MotorConfig.rising_edge_duty_cycle = 0;
@@ -199,7 +199,7 @@ static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsign
     uByte2 halldata;
 
     halldata.sval = encGetPos();
-    send(status, 2, halldata.cval, CMD_HALL_ENCODER, last_addr);
+    send(status, 2, halldata.cval, CMD_HALL_CURRENT_POS, last_addr);
     LED_2 = ~LED_2;
 }
 
@@ -214,7 +214,7 @@ static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned c
              delay_ms(100);
         }
        
-        processcam = 1; //TeSTING code
+        sendCamData = frame[1]; //TeSTING code
         mem_pg_idx = 0x250;
         numsamples = 0;
         hall_total_cnt.sval =0;
@@ -869,27 +869,29 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 }
 
 /******************************************************************************
-*******************FUNCTION POINTER QUEUE*********************************
+*******************INTERNAL FUNCTION POINTER QUEUE*********************************
 *******************************************************************************/
-#define EXC_FUNC_MAX 10
+//For sampling/internal control/interrupts
 
+#define EXC_FUNC_MAX 10
 
 //CREATE CIRCULAR ARRAY//
 static CircArray Exc;
-static unsigned char DataWrite[HALLDATALENGTH];
+static unsigned char DataWrite[HALLDATALENGTH];//used to store data to be written to memory
 
 //SETTING UP THE CIRCUILAR ARRAY WITH MAX FUNC =10//
 void excSetup(){
     Exc= carrayCreate(EXC_FUNC_MAX);
 }
 
-//Function Declaration//b
+//Function Declaration//
 static void excGetHallEncPos(void);
 static void excGetCamData(void);
 static void excProcessCamMotor(void);
 static void excRecordData(void);
 
-void (*excGetHall)(void) = &excGetHallEncPos; //Function Pointer
+//Function Pointers//
+void (*excGetHall)(void) = &excGetHallEncPos; 
 void (*excGetCam)(void) = &excGetCamData;
 void (*excProcessCam)(void) = &excProcessCamMotor;
 void (*excRecord)(void) = &excRecordData;
@@ -897,23 +899,20 @@ void (*excRecord)(void) = &excRecordData;
 static void excGetCamData(void)
 {
     exc_wii_ptr = wiiReadData();
-    LED_3 = ~LED_3;
     // int i;
     // for (i = 0; i <12;i++)
     // {
     //     DataWrite[i] = *(exc_wii_ptr+i);
     // }
-    // delay_ms(100);
-
-    send(1, 12, exc_wii_ptr, CMD_WII_DUMP,last_addr);
-    //excRecordData();
+    delay_ms(100);
+    send(STATUS_UNUSED, 12, exc_wii_ptr, CMD_WII_DUMP,last_addr);
 }
 
+//Save data to pages 250 - n in memory
 static void excRecordData(void)
 {
         dfmemWriteBuffer(DataWrite, HALLDATALENGTH, numsamples*HALLDATALENGTH, buf_idx);
         numsamples++;
-        LED_3 = ~LED_3;
 
         if(numsamples*HALLDATALENGTH >= FLASH_8MBIT_BYTES_PER_PAGE) 
         {   
@@ -929,29 +928,35 @@ static void excProcessCamMotor(void)
     
     exc_wii_ptr = wiiReadData();
     delay_ms(100);
-    // curr_blobsize = exc_wii_ptr[2] & 0xF;
+    send(STATUS_UNUSED, 12, exc_wii_ptr, CMD_WII_DUMP,last_addr);
     curr_blobxpos = ((exc_wii_ptr[2] & 0x30)<<8) +(exc_wii_ptr[0]);
-    // if(curr_blobsize != 0xF && curr_blobsize !=0)
-    if(curr_blobsize != 0xF && curr_blobsize !=0)
+    if(curr_blobxpos != 0x3FF && curr_blobxpos !=0)
     {
-        LED_1 = ~LED_1;
+        //mcSetDutyCycle(1, 0);
+        //LED_1 = ~LED_1;
         // if(curr_blobsize>prev_blobsize)
         if (curr_blobxpos>prev_blobxpos )
         {
             curr_speed -= 0.2;
-            //mcSetDutyCycle(1,curr_speed);
-            //LED_1 =~LED_1;
+            mcSetDutyCycle(1,curr_speed);
+            MD_LED_1 =~LED_1;
         }
         if(curr_blobxpos<prev_blobxpos)
         {
             curr_speed += 0.2;
-            //mcSetDutyCycle(1,curr_speed);
-            //LED_2 = ~LED_2;
+            mcSetDutyCycle(1,curr_speed);
+            MD_LED_2 = ~LED_2;
         }
 
         prev_blobxpos  = curr_blobxpos;
         // prev_blobsize = curr_blobsize;
     }
+
+    // else
+    // {
+    //     mcSetDutyCycle(1,.3);
+    // }
+
       
 }
 
@@ -1020,7 +1025,6 @@ void cmdHandleExcBuffer(void){
 }
 
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
-
 {   
     if(sethall)
     {
@@ -1029,20 +1033,21 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
         hall_total_cnt.sval++;
         if(hall_total_cnt.sval % 100 ==0)
         {
-            if(processcam)
+            if(0)//transmit camera results over radio
             {
                 carrayAddTail(Exc,excGetCam);
-                LED_2 = ~LED_2;
+                //carrayAddTail(Exc,excRecord);
             }
-        }
+    
             
-        //     else
-        //     {
-        //         carrayAddTail(Exc,excGetCam);
-        //     }
-        // } 
-        // }
+            else//use camera results to affect motor
+            {
+                carrayAddTail(Exc,excProcessCam);
+                //carrayAddTail(Exc,excRecord);
+            }
+        } 
     }
+
     //Not to make the data overflow
     // if(mem_pg_idx==0x0318) //Erases 8Blocks (8*8 =64) 0x250=592 (592+64=656 -> 0x290)
     // {

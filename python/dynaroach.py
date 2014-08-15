@@ -180,7 +180,6 @@ class DynaRoach(object):
 			self.wiidata = unpack('12B',data)
 			self.has_new_wiidata = True
 			print(self.wiidata)
-			print("wii")
 		elif typeID ==cmd.TX_HALLENC:
 			self.hall_encdata = unpack('<3L',data)
 			#print(self.hall_encdata)
@@ -188,6 +187,7 @@ class DynaRoach(object):
 			datum = self.hall_encdata[1]#degrees
 			output = self.hall_encdata[2]
 			things= [self.hall_encdata,self.data_cnt]
+			print(datum)
 			#print(datum)
 			#print(time)
 			#print(self.data_cnt)
@@ -197,7 +197,7 @@ class DynaRoach(object):
 				self.output_state_data.append(output)
 			
 			self.data_cnt += 1
-			print(things)
+			#print(things)
 			# if self.data_cnt % 1500 == 0:
 			# 	print self.data_cnt, "/", self.last_sample_count
 			
@@ -358,17 +358,21 @@ class DynaRoach(object):
 			self.test_hallenc(channel_num=1, duty_cycle=openspeed)
 			time.sleep(2)
 			
-	def test_hallenc(self, channel_num=1, duty_cycle=0.4, sampling_time=3):
+	def test_hallenc(self, channel_num=1, duty_cycle=0.4, sampling_time=3, transmit_data = True):
 		self.last_sample_count = 0
 		total_sample = 0
-		
+		sendWiiData = 1#default is to transmit wii data, not process it#doesn't work yet, defaults to process+send
+
 		channel = chr(channel_num)
 		cmd_stop = channel + chr(0)
 		cmd_data = channel+chr(int(duty_cycle*100))
-		hallON = str(pack('h', int(1)))
-		hallOFF =str(pack('h', int(0)))
+		if(not transmit_data):
+			sendWiiData = 0
 
-		# self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
+		hallON = str(pack('hh', int(1),int(sendWiiData)))
+		hallOFF =str(pack('hh', int(0),int(0)))
+
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		# time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallON)
 		time.sleep(2.5)#Delay between configenc-stopmotor (2.5 sec is for deleting pages)
@@ -380,58 +384,61 @@ class DynaRoach(object):
 		time.sleep(.1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallOFF)
 		time.sleep(1)
-		# self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(1)
 		
-		# if(self.last_sample_count == 0):
-		# 	self.get_sample_count()
+		if(self.last_sample_count == 0):
+			self.get_sample_count()
+			print self.last_sample_count
 		# 	time.sleep(0.5)
 
 		# if(self.last_sample_count == 0):
 		# 	print("There is no previously saved data.")
 		# 	return
 
-		# else:
-		# 	self.data_cnt = 0
-		# 	tdelta= 0
-		# 	self.hall_encdata = []
-		# 	self.interm_state_data = []
-		# 	self.output_state_data=[]
-		# 	self.hall_times= []
-		# 	self.hall_avr_speed =[]
-		# 	unroll= []
-		# 	total_sample = self.last_sample_count #500 could be used but inaccurate
+		else:
+			self.data_cnt = 0
+			tdelta= 0
+			self.hall_encdata = []
+			self.interm_state_data = []
+			self.output_state_data=[]
+			self.hall_times= []
+			self.hall_avr_speed =[]
+			unroll= []
+			total_sample = self.last_sample_count #500 could be used but inaccurate
 		start_page = 0x250
 		# 	print("Transmitting saved data...")
 		self.radio.send(cmd.STATUS_UNUSED, cmd.TX_HALLENC, pack('3H', start_page,total_sample, HALL_SAMPLE_BYTES))
-			
-		# 	time.sleep(30)
+		print total_sample
+		time.sleep(30)
 
-			# self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
-			# self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
-			# self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
-			# tdelta = self.hall_times[4]-self.hall_times[3]
-			# unroll= np.diff(np.unwrap(self.output_state_data,180))
-			# self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
-			# #speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
-			# #freq = 1/tdelta
-			# print(self.interm_state_data)
-			# print(total_sample)
-			# # print(self.hall_times)
-			# fig = plt.figure()
-			# ax1=fig.add_subplot(311)
-			# ax2=fig.add_subplot(312)
-			# # ax3=fig.add_subplot(313)
-			# # # print(self.hall_times)
-			# # # print(self.interm_state_data)
-			# # # print(self.output_state_data)
-			# #ax1.plot(self.interm_state_data,'b-')
-			# ax1.plot(self.hall_times[:total_sample-500],self.interm_state_data[:total_sample-500],'b.')
-			# ax1.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
-			# ax1.set_ylim((0,400))
-			# ax1.set_xlabel('Time(s)')
-			# ax1.set_ylabel('degrees')
-			# ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(total_sample,duty_cycle))
+		self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
+		self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
+		self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
+		#tdelta = self.hall_times[4]-self.hall_times[3]
+		#unroll= np.diff(np.unwrap(self.output_state_data,180))
+		#self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
+		#speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
+		#freq = 1/tdelta
+		#print(self.interm_state_data)
+		#print(total_sample)
+		# print(self.hall_times)
+		fig = plt.figure()
+		ax1=fig.add_subplot(111)
+		print self.hall_times
+		#ax2=fig.add_subplot(312)
+		# ax3=fig.add_subplot(313)
+		# # print(self.interm_state_data)
+		# # print(self.output_state_data)
+		ax1.plot(self.interm_state_data[:self.data_cnt-100],'b.')
+
+
+		#ax1.plot(self.hall_times[:self.data_cnt-200],self.interm_state_data[:self.data_cnt-200],'b.')
+		#ax1.set_xlim((self.hall_times[0], self.hall_times[self.data_cnt-200]))
+		ax1.set_ylim((0,400))
+		ax1.set_xlabel('Time(s)')
+		ax1.set_ylabel('degrees')
+		ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(self.data_cnt,duty_cycle))
 			
 			# ax2.plot(self.hall_times[:total_sample-500],self.output_state_data[:total_sample-500],'b.')
 			# # #ax2.plot(self.hall_times[:300],self.output_state_data[:300],'b-')
@@ -449,8 +456,8 @@ class DynaRoach(object):
 			# # # ax3.set_ylabel('Hz')
 			# # # ax3.set_title('Output Gear Average Speed. Speed of Robot = %.2f Hz'%speedo)
 		
-			# fig.tight_layout()
-			# fig.show()
+		fig.tight_layout()
+		fig.show()
 
 			# # #hallarrays= np.array(self.hall_times, self.interm_state_data,self.output_state_data)
 			# name = "%.2f.png" % duty_cycle
