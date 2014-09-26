@@ -29,4 +29,4 @@ RESET           = 0x1A
 ECHO            = 0x1F
 SET_INPUT		= 0x1B
 TX_HALLENC		= 0x1D
-TEST_ENCODER	= 0x1E
+SET_ENCODER	    = 0x1E

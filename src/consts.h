@@ -37,14 +37,12 @@
 #define CMD_TEST_GYRO               0x01
 #define CMD_TEST_ACCEL              0x02
 #define CMD_TEST_DFLASH             0x03
-#define CMD_TEST_MOTOR              0x04
-#define CMD_TEST_SMA                0x05
 #define CMD_TEST_BATT               0x07
 #define CMD_ERASE_MEM_SECTOR        0x08
 #define CMD_GET_SAMPLE_COUNT        0x09
 #define CMD_RUN_GYRO_CALIB          0x0A
 #define CMD_GET_GYRO_CALIB_PARAM    0x0B
-#define CMD_TEST_SWEEP              0x0C
+#define CMD_TEST_MOTOR_SWEEP        0x0C
 #define CMD_GET_BACK_EMF			0x0D
 #define CMD_WII_DUMP				0x0E//Todo: move these.  They really aren't for testing.
 #define CMD_HALL_CURRENT_POS		0x0F
@@ -64,7 +62,6 @@
 #define CMD_TX_SAVED_DATA       0x13
 #define CMD_SET_MOTOR           0x14
 #define CMD_SET_SMA             0x15
-#define CMD_SET_SAVE_DATA       0x16
 #define CMD_CONFIGURE_SETTINGS  0x17
 #define CMD_SET_STREAMING       0x18
 #define CMD_SET_MOTOR_CONFIG    0x19

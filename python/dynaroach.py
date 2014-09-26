@@ -374,15 +374,15 @@ class DynaRoach(object):
 
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_data)
 		# time.sleep(1)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallON)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_ENCODER,hallON)
 		time.sleep(2.5)#Delay between configenc-stopmotor (2.5 sec is for deleting pages)
 		time.sleep(sampling_time)
 		#command is repeated to ensure that sampling stops
-		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallOFF)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_ENCODER,hallOFF)
 		time.sleep(.1)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallOFF)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_ENCODER,hallOFF)
 		time.sleep(.1)
-		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_ENCODER,hallOFF)
+		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_ENCODER,hallOFF)
 		time.sleep(1)
 		self.radio.send(cmd.STATUS_UNUSED, cmd.SET_MOTOR,cmd_stop)
 		time.sleep(1)
@@ -661,7 +661,7 @@ class DynaRoach(object):
 			self.radio.send(cmd.STATUS_UNUSED, cmd.SET_SMA, cmd_side+cmd_duty_cycle)
 			
 	#WII DUMP=  Tells where the LEDs. Updates every 1ms)
-	def wii_dump(self):
+	def wii_dump(self, s_to_run = 1000):
 		i=0
 		app = QtGui.QApplication([])
 		mw = QtGui.QMainWindow()
@@ -679,6 +679,7 @@ class DynaRoach(object):
 		sclx=1
 		scly=1
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,[])
+		start_time = int(round(time.time() * 1000000))
 		while(self.wiidata!=None):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
 			if(self.has_new_wiidata):
 				print('capture'+str(i))
@@ -703,7 +704,8 @@ class DynaRoach(object):
 				wii.clear()
 				i+=1
 
-				self.has_new_wiidata = False
+				self.has_new_wiidata = False	
+		
 
 			#plt.scatter(b[:,0],b[:,1],s= b[:,2]*10, c= 'b', label='real data')
 			#plt.scatter(self.dot_pos, b[0][1], s= 20, c='r', label= 'filtered') # since we are only doing x coordinate (1d) we used measured y data
