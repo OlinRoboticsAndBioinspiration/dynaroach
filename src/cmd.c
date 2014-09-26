@@ -8,7 +8,6 @@
 #include "attitude_q.h"
 #include "payload.h"
 #include "consts.h"
-//#include "network.h"
 #include "utils.h"
 #include "sclock.h"
 #include "gyro.h"
@@ -22,11 +21,9 @@
 #include <stdint.h>
 #include "ams-enc.h"
 #include "carray.h"
-//#include "hall.h"
 
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
 #define FLASH_16MBIT_BYTES_PER_PAGE         528
-//#define ROBOT 0
 #define ROBOT 1
 
 #define SRC_ADDR_LOC        0x400 
@@ -143,7 +140,7 @@ static void cmdGetBackEMF(unsigned char status, unsigned char length, unsigned c
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetInput(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame);
-static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdConfigHallSample(unsigned char status, unsigned char length, unsigned char *frame);
 void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type, unsigned int dest);
 
 //Delete these once trackable management code is working
@@ -161,9 +158,6 @@ void cmdSetup(void)
     {
         cmd_func[i] = &cmdNop;// assign all array element to be a pointer pointer
     }
-//cmd_func = array []= indices 
-//function pointer array
-//define somewhere cmdtoggleled => logic 
     cmd_func[CMD_TX_SAVED_DATA] = &cmdTxSavedData;
     cmd_func[CMD_ECHO] = &cmdEcho;
     cmd_func[CMD_CONFIGURE_TRIAL] = &cmdConfigureTrial;
@@ -188,7 +182,7 @@ void cmdSetup(void)
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
     cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
-    cmd_func[CMD_SET_HALLENC] = &cmdSetHallEnc;
+    cmd_func[CMD_CONFIG_HALL_SAMPLE] = &cmdConfigHallSample;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -203,7 +197,7 @@ static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsign
     LED_2 = ~LED_2;
 }
 
-static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned char *frame){ 
+static void cmdConfigHallSample(unsigned char status, unsigned char length, unsigned char *frame){ 
     int i;
 
     if(frame[0])
@@ -211,10 +205,9 @@ static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned c
         for(i=0x04A;i<0x63;i++)//Erase 200 worth of pages
         {
             dfmemEraseBlock(i);
-             delay_ms(100);
+            delay_ms(100);
         }
-       
-        sendCamData = frame[1]; //TeSTING code
+
         mem_pg_idx = 0x250;
         numsamples = 0;
         hall_total_cnt.sval =0;
@@ -224,12 +217,13 @@ static void cmdSetHallEnc(unsigned char status, unsigned char length, unsigned c
         T7CONbits.TON = 1;
         LED_1 = 1;
     }
+
     else{
         sethall=0;
         T7CONbits.TON = 0;
         LED_1 = 0;
     }
-    //halldata.sval= 0;
+
 }
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
 {   
@@ -310,7 +304,6 @@ static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigne
 	if(ROBOT)
     {
         unsigned int start_page = frame[0] + (frame[1] << 8);
-        //unsigned int end_page = frame[2] + (frame[3] << 8);
         unsigned int num_samples = frame[2] + (frame[3] << 8);
         unsigned int tx_data_size = frame[4] + (frame[5] << 8);
         unsigned int i, j;
@@ -364,7 +357,6 @@ static void cmdTxSavedData(unsigned char status, unsigned char length, unsigned 
     if(ROBOT)
     {
         unsigned int start_page = frame[0] + (frame[1] << 8);
-        //unsigned int end_page = frame[2] + (frame[3] << 8);
         unsigned int num_samples = frame[2] + (frame[3] << 8);
         unsigned int tx_data_size = frame[4] + (frame[5] << 8);
         unsigned int i, j;
@@ -663,8 +655,7 @@ static void cmdTestSweep(unsigned char status, unsigned char length, unsigned ch
   temp.c[1] = frame[3];
   sweep_stop_speed = temp.i/100.f;
   do_sweep = 1;
-  //sweep_start_speed = 15;
-  //sweep_stop_speed = 40;
+
   MD_LED_2 = ~MD_LED_2;
 }
 
@@ -869,13 +860,12 @@ void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
 }
 
 /******************************************************************************
-*******************INTERNAL FUNCTION POINTER QUEUE*********************************
+*******************INTERNAL FUNCTION POINTER QUEUE*****************************
 *******************************************************************************/
 //For sampling/internal control/interrupts
 
 #define EXC_FUNC_MAX 10
 
-//CREATE CIRCULAR ARRAY//
 static CircArray Exc;
 static unsigned char DataWrite[HALLDATALENGTH];//used to store data to be written to memory
 
@@ -899,11 +889,6 @@ void (*excRecord)(void) = &excRecordData;
 static void excGetCamData(void)
 {
     exc_wii_ptr = wiiReadData();
-    // int i;
-    // for (i = 0; i <12;i++)
-    // {
-    //     DataWrite[i] = *(exc_wii_ptr+i);
-    // }
     delay_ms(100);
     send(STATUS_UNUSED, 12, exc_wii_ptr, CMD_WII_DUMP,last_addr);
 }
@@ -932,9 +917,6 @@ static void excProcessCamMotor(void)
     curr_blobxpos = ((exc_wii_ptr[2] & 0x30)<<8) +(exc_wii_ptr[0]);
     if(curr_blobxpos != 0x3FF && curr_blobxpos !=0)
     {
-        //mcSetDutyCycle(1, 0);
-        //LED_1 = ~LED_1;
-        // if(curr_blobsize>prev_blobsize)
         if (curr_blobxpos>prev_blobxpos )
         {
             curr_speed -= 0.2;
@@ -949,15 +931,7 @@ static void excProcessCamMotor(void)
         }
 
         prev_blobxpos  = curr_blobxpos;
-        // prev_blobsize = curr_blobsize;
     }
-
-    // else
-    // {
-    //     mcSetDutyCycle(1,.3);
-    // }
-
-      
 }
 
 static void excGetHallEncPos(void)
@@ -972,10 +946,8 @@ static void excGetHallEncPos(void)
     {
         if(curr_halldata.lval-prev_halldata.lval>60)
         {
-        //if(past_In_hallData.lval-In_hallData.lval>60){
             rotation_cnt++;
         }   
-        //}
     }
     if(rotation_cnt>4)
     {
@@ -989,10 +961,8 @@ static void excGetHallEncPos(void)
     {
         if(prev_halldata.lval-curr_halldata.lval<FULLROT)
         {
-            //out_hallpos.lval = (rotation_cnt*REVTOOUTPUT+curr_halldata.lval)/GEARRATIO;
             out_hallpos.lval = FULLROT-(rotation_cnt*REVTOOUTPUT+(FULLROT-curr_halldata.lval)/GEARRATIO);
         }
-        //16384-(rotation_cnt*3277 +(16384-In_hallData.lval)/5); //3276.8= 2^14/5
     }
 
     prev_halldata.lval = curr_halldata.lval;
@@ -1033,32 +1003,20 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
         hall_total_cnt.sval++;
         if(hall_total_cnt.sval % 100 ==0)
         {
-            if(0)//transmit camera results over radio
+            if(0)
             {
                 carrayAddTail(Exc,excGetCam);
                 //carrayAddTail(Exc,excRecord);
             }
     
             
-            else//use camera results to affect motor
+            else
             {
                 carrayAddTail(Exc,excProcessCam);
                 //carrayAddTail(Exc,excRecord);
             }
         } 
     }
-
-    //Not to make the data overflow
-    // if(mem_pg_idx==0x0318) //Erases 8Blocks (8*8 =64) 0x250=592 (592+64=656 -> 0x290)
-    // {
-    //     sethall = 0;
-    //     T7CONbits.TON = 0;
-    //     LED_1=0;
-    //     LED_2=0;
-    //     LED_3=0;
-    // }
-    
-
     _T7IF = 0;
 }
 
