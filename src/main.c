@@ -77,9 +77,6 @@ static void timer2Setup(void)
 	unsigned int conf_reg, period;
 
 	conf_reg = T2_ON & T2_SOURCE_INT & T2_PS_1_256 & T2_GATE_OFF;
-	//Period in us is 1/40*period.
-	//period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
-	//period = (unsigned int)0x9c40; //timer period 1ms = period/FCY.
 	period = (unsigned int)0x138; //timer period 2ms = period/FCY * prescaler.
 	OpenTimer2(conf_reg, period);
 	ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
@@ -99,20 +96,6 @@ static void timer6Setup(void)
 	IEC2bits.T6IE = 1; //Enable interrupt
 	T6CONbits.TON = 1; //Turn the timer on
 }
-
-// static void timer5Setup(void)
-// {
-// 	T5CONbits.TON = 0; // Disable Timer
-// 	T5CONbits.TCS = 0; // Select internal instruction cycle clock 
-// 	T5CONbits.TGATE = 0; // Disable Gated Timer mode
-// 	T5CONbits.TCKPS = 0b10; // Select 1:64 Prescaler
-// 	TMR5 = 0x00; // Clear timer register
-// 	PR5 = 1250; // Load the period value (.002 s) 
-// 	IPC7bits.T5IP = 0x04; //priority
-// 	IFS1bits.T5IF = 0; //Flag =0
-// 	IEC1bits.T5IE = 1; //Enable interrupt
-// 	T5CONbits.TON = 1; //Turn the timer on
-// }
 
 static void timer7Setup(void)
 {

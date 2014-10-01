@@ -15,7 +15,6 @@ from serial import Serial, SerialException
 from pyqtgraph.Qt import QtGui, QtCore, USE_PYSIDE
 import numpy as np
 import pyqtgraph as pg
-#from pyqtgraph.ptime import time
 from struct import pack, unpack
 from operator import attrgetter
 
@@ -30,8 +29,7 @@ DEFAULT_BAUD_RATE = 230400
 #DEFAULT_DEST_ADDR = '\x00\x11'
 DEFAULT_DEST_ADDR = '\x00\x18'
 
-DEFAULT_DEV_NAME = '/dev/ttyUSB0' #Dev ID for ORANGE antenna base station
-
+DEFAULT_DEV_NAME = '/dev/ttyUSB0' 
 SMA_RIGHT = 0
 SMA_LEFT =  1
 
@@ -64,6 +62,7 @@ VBATT_VOLTS_PER_CNT = 3.3/512
 ACCEL_G_PER_BIT = 15.6/1000
 
 
+#test parameters
 ACCEL_BASE = [(-185, -5, 125),(5,-190,130)]
 ACCEL_RANGE = 5
 
@@ -75,10 +74,6 @@ MOTOR_RANGE = 20
 
 BATT_BASE = 785
 BATT_RANGE = 15
-
-PROCESS_COV = .2 #this is just a placeholder until we work out the actual error!
-MEAS_COV = .5 #see above
-STATE_TRAN = 1 #assuming that the leader is moving forward
 
 HALL_DEGREES_PER_LSB = 0.0219
 PIC_PR = 40*10**(6)
@@ -205,35 +200,6 @@ class DynaRoach(object):
 			if (len(data) == 35):
 			  datum = list(unpack('<L3f3h2HB4H', data))
 
-	def kalman(self):
-		for i in range(4):
-			bin_rep = [bin(x)[2:] for x in self.wiidata[i:i+3]]
-			x_meas = int(bin_rep[1]+ bin_rep[2][4:6])
-			if (x_meas is not 1023):#blob exists
-				break
-
-		if (x_meas == 1023):#checks if the last of four dots is invalid, having checked all other dots beforehand
-			print("No blobs found.")
-			return #do something else here- start the "no blobs" routine
-
-		for i in range(0,1000):
-			prior_pos = self.dot_pos
-			self.dot_pos = self.dot_pos*STATE_TRAN#really only here if we ever add a transition- maybe size?
-			self.error = self.error + PROCESS_COV
-
-			m_gain = self.error/(self.error + MEAS_COV)
-			self.dot_pos = self.dot_pos + m_gain*(x_meas - self.dot_pos)
-			self.error = (1-m_gain)*self.error
-			res[i] = self.dot_pos
-
-		#error checking
-		if prior_pos < self.dot_pos:
-			print("Dot moved left")
-		elif self.dot_pos == prior_pos:
-			print("Dot moved right")
-		else:
-			print("Dot immobile")
-
 	def echo(self):
 		'''
 		Description:
@@ -337,20 +303,7 @@ class DynaRoach(object):
 			print(dcycle)
 			f.write(str(self.hall_enc)+"\n")
 			time.sleep(1)
-		f.close()
-		
-	def set_speed(channel= 1):
-		'''
-		Description:
-		Set a speed of a robot by inputing an ideal speed to pid controller that is embedded in the robot
-		'''
-		speed= input('Enter the speed in Hz:')
-		print('Running the robot in %d.....' %speed)
-
-		#ConvtoDuty= 323.5*float(speed)**5-991.0*float(speed)**4+117.0*float(speed)**3-668.6*float(speed)**2+191.4*float(speed)-0.0054
-		print(ConvtoDuty)
-		#cmd_data = channel+chr(int(ConvtoDuty*100))
-		#self.radio.send(cmd.STATUS_UNUSED,cmd.SET_SPEED,cmd_data)
+		f.close()	
 
 	def open_looptest(self):
 		for i in range(2):
@@ -390,11 +343,6 @@ class DynaRoach(object):
 		if(self.last_sample_count == 0):
 			self.get_sample_count()
 			print self.last_sample_count
-		# 	time.sleep(0.5)
-
-		# if(self.last_sample_count == 0):
-		# 	print("There is no previously saved data.")
-		# 	return
 
 		else:
 			self.data_cnt = 0
@@ -415,61 +363,21 @@ class DynaRoach(object):
 		self.hall_times = [x/float(PIC_PR) for x in self.hall_times]
 		self.interm_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.interm_state_data]
 		self.output_state_data = [x*float(HALL_DEGREES_PER_LSB) for x in self.output_state_data]
-		#tdelta = self.hall_times[4]-self.hall_times[3]
-		#unroll= np.diff(np.unwrap(self.output_state_data,180))
-		#self.hall_avr_speed =[abs(x/(360*tdelta)) for x in unroll] #360 for one revolution to get HZ
-		#speedo=(sum(self.hall_avr_speed[300:400])/float(len(self.hall_avr_speed[300:400])))
-		#freq = 1/tdelta
-		#print(self.interm_state_data)
-		#print(total_sample)
-		# print(self.hall_times)
+
 		fig = plt.figure()
 		ax1=fig.add_subplot(111)
 		print self.hall_times
-		#ax2=fig.add_subplot(312)
-		# ax3=fig.add_subplot(313)
-		# # print(self.interm_state_data)
-		# # print(self.output_state_data)
+
 		ax1.plot(self.interm_state_data[:self.data_cnt-100],'b.')
 
-
-		#ax1.plot(self.hall_times[:self.data_cnt-200],self.interm_state_data[:self.data_cnt-200],'b.')
-		#ax1.set_xlim((self.hall_times[0], self.hall_times[self.data_cnt-200]))
 		ax1.set_ylim((0,400))
 		ax1.set_xlabel('Time(s)')
 		ax1.set_ylabel('degrees')
 		ax1.set_title('Input Gear position over time with %d samples with duty_cycle of %.2f'%(self.data_cnt,duty_cycle))
-			
-			# ax2.plot(self.hall_times[:total_sample-500],self.output_state_data[:total_sample-500],'b.')
-			# # #ax2.plot(self.hall_times[:300],self.output_state_data[:300],'b-')
-			# ax2.set_xlim((self.hall_times[0], self.hall_times[total_sample-500]))
-			# ax2.set_ylim((0,400))
-			# ax2.set_xlabel('Time(s)')
-			# ax2.set_ylabel('degrees')
-			# ax2.set_title('Output Gear position')
-			
-			
-			# # # ax3.plot(self.hall_avr_speed[:total_sample-1],'ro')
-			# # # #plt.xlim((self.hall_times[0], self.hall_times[total_sample]))
-			# # # ax3.set_ylim((0,20))
-			# # # ax3.set_xlabel('Num of samples')
-			# # # ax3.set_ylabel('Hz')
-			# # # ax3.set_title('Output Gear Average Speed. Speed of Robot = %.2f Hz'%speedo)
 		
 		fig.tight_layout()
 		fig.show()
 
-			# # #hallarrays= np.array(self.hall_times, self.interm_state_data,self.output_state_data)
-			# name = "%.2f.png" % duty_cycle
-			# # fname = "%.2f.txt" % duty_cycle
-
-			# # # hallfmt= "%s %s %s"
-			# # # np.savetxt(fname, np.transpose(self.hall_times, self.interm_state_data,self.output_state_data), hallfmt)
-   #   		plt.savefig(name, bbox_inches='tight') # format='png')
-   #  		time.sleep(5)
-   #  		plt.close(fig)
-	
-		
 	def test_gyro(self):
 		#sensitivity scale of gyro is 14.375
 		'''
@@ -577,63 +485,6 @@ class DynaRoach(object):
 
 		# print("Test passed.")
 
-
-
-
-	# def test_motor(self, motor_id, time, duty_cycle, direction, return_emf=0):
-	#     '''
-	#     Description:
-	#        Turn on a motor.
-	#    Parameters:
-	#         motor_id    : The motor number to turn on
-	#         time        : The amount of time to turn the motor on for (in
-	#                          seconds)
-	#         duty_cycle  : The duty cycle of the PWM signal used to control the
-	#                          motor in percent (0 - 100) 
-	#         direction   : The direction to spin the motor. There are *three*
-	#                          options for this parameter. 0 - reverse, 1 - forward, 
-	#                          2 high impedance motor controller output = braking
-	#         return_emf  : Send the back emf readings over the radio channel.
-	#     '''
-	
-	#     if direction >= 2:
-	#         direction = 2
-	#     elif direction <= 0:
-	#         direction = 0
-	#     else:
-	#         direction = 1
-	
-	#     if return_emf != 1:
-	#         return_emf = 0
-	
-	#     data_out = chr(cmd.STATUS_UNUSED) + chr(cmd.TEST_MOTOR) + chr(motor_id) + \
-	#                 chr(time) + chr(duty_cycle) + chr(direction) + \
-	#                 chr(return_emf)
-	#     if(self.check_conn()):
-	#         self.radio.tx(dest_addr=self.dest_addr, data=data_out)
-
-#    def test_sma(self, chan_id, time, duty_cycle):
-#        '''
-#        Description:
-#            Turn on an SMA
-#        Parameters:
-#            chan_id     : The SMA channel to turn on
-#            time        : The amount of time to turn the SMA on for (in
-#                          seconds)
-#            duty_cycle  : The duty cycle of the PWM signal used to control the
-#                          SMA in percent (0 - 100)
-#        '''
-#
-#        if(duty_cycle < 0 or duty_cycle > 100):
-#            print("You entered an invalid duty cycle.")
-#            return
-#
-#        data_out = chr(cmd.STATUS_UNUSED) + chr(cmd.TEST_SMA) + chr(chan_id) + \
-#                   chr(time) + chr(duty_cycle)
-#
-#        if(self.check_conn()):
-#            self.radio.tx(dest_addr=self.dest_addr, data=data_out)
-
 	def test_hall(self):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.TEST_HALL, [])
 
@@ -705,13 +556,6 @@ class DynaRoach(object):
 				i+=1
 
 				self.has_new_wiidata = False	
-		
-
-			#plt.scatter(b[:,0],b[:,1],s= b[:,2]*10, c= 'b', label='real data')
-			#plt.scatter(self.dot_pos, b[0][1], s= 20, c='r', label= 'filtered') # since we are only doing x coordinate (1d) we used measured y data
-			#plt.axis([0,1023,0,1023])
-			#plt.draw()
-		#plt.close()
 		
 	def get_sample_count(self):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.GET_SAMPLE_COUNT, pack('H', 0))
