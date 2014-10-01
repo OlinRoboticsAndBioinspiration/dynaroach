@@ -177,12 +177,10 @@ void cmdSetup(void)
     cmd_func[CMD_SET_STREAMING] = &cmdSetDataStreaming;
     cmd_func[CMD_SET_MOTOR_CONFIG] = &cmdSetMotorConfig;
     cmd_func[CMD_RESET] = &cmdReset;
-    cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_GET_BACK_EMF] = &cmdGetBackEMF;
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
     cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder;
-    cmd_func[CMD_CONFIG_HALL_SAMPLE] = &cmdConfigHallSample;
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -645,19 +643,6 @@ static void cmdTestDflash(unsigned char status, unsigned char length, unsigned c
 static int do_sweep = 0;
 static float sweep_start_speed = 0;
 static float sweep_stop_speed = 0;
-static void cmdTestSweep(unsigned char status, unsigned char length, unsigned char* frame)
-{
-  intT temp;
-  temp.c[0] = frame[0];
-  temp.c[1] = frame[1];
-  sweep_start_speed = temp.i/100.f;
-  temp.c[0] = frame[2];
-  temp.c[1] = frame[3];
-  sweep_stop_speed = temp.i/100.f;
-  do_sweep = 1;
-
-  MD_LED_2 = ~MD_LED_2;
-}
 
 static void cmdEraseMemSector(unsigned char status, unsigned char length, unsigned char *frame)
 {
@@ -812,20 +797,12 @@ void motor_falling_edge() {
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
 	unsigned char * wii_ptr; 
     WiiBlob Blobs[4]; 
-    if(frame[0])
-    {
-        readWiiData =1;
-    }
 
-    while(readWiiData)
+    while(frame[0])
     {
     	wii_ptr= wiiReadData();
         delay_ms(100);
     	send(status, 12, wii_ptr, CMD_WII_DUMP,last_addr);
-        if (wiiFindTarget(Blobs) == -1)
-        {
-            Wiiinvalid++;
-        }   
     }
 
 }
@@ -846,17 +823,6 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
   }
   prevHall = hall;
   _T2IF = 0;
-}
-
-void __attribute__((interrupt, no_auto_psv)) _T6Interrupt(void)
-{
-
-	if(Wiiinvalid>=10000){
-		readWiiData= 0;
-		MD_LED_1 = ~MD_LED_1; //When Motor Drive LED blinks, it means it has detected wiiinvalid blobs so many times so it stops sending.
-	}
-    _T6IF = 0;
-  
 }
 
 /******************************************************************************

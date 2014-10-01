@@ -83,20 +83,6 @@ static void timer2Setup(void)
 	_T2IE = 1;
 }
 
-static void timer6Setup(void)
-{
-	T6CONbits.TON = 0; // Disable Timer
-	T6CONbits.TCS = 0; // Select internal instruction cycle clock 
-	T6CONbits.TGATE = 0; // Disable Gated Timer mode
-	T6CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
-	TMR6 = 0x00; // Clear timer register
-	PR6 = 156250; // Load the period value (500ms)
-	IPC11bits.T6IP = 0x04; //priority
-	IFS2bits.T6IF = 0; //Flag =0
-	IEC2bits.T6IE = 1; //Enable interrupt
-	T6CONbits.TON = 1; //Turn the timer on
-}
-
 static void timer7Setup(void)
 {
 	T7CONbits.TON = 0; // Disable Timer
@@ -188,7 +174,6 @@ int main ( void )
 	sclockSetup();
 	// timer1Setup();
 	// timer2Setup();
-	timer6Setup();
 	timer7Setup();
 
 	cmdSetup();
