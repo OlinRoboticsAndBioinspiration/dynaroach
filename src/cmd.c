@@ -797,8 +797,9 @@ void motor_falling_edge() {
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
 	unsigned char * wii_ptr; 
     WiiBlob Blobs[4]; 
+    int keep_sending = frame[0];
 
-    while(frame[0])
+    while(keep_sending)
     {
     	wii_ptr= wiiReadData();
         delay_ms(100);

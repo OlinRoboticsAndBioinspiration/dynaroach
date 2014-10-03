@@ -279,7 +279,6 @@ class DynaRoach(object):
 			Parameters:
 				trial: The configured trial to be executed.
 		'''
-
 		self.radio.send(cmd.STATUS_UNUSED, cmd.RUN_TRIAL, [])
 
 	def run_gyro_calib(self, num_samples='2000'):
@@ -533,6 +532,7 @@ class DynaRoach(object):
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["1"])
 		now = int(round(time.time() * 1000000)) 
 		end = now + s_to_run
+		print(end)
 
 		while(end > now):
 			while(self.wiidata != None):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
@@ -567,6 +567,9 @@ class DynaRoach(object):
 					self.has_new_wiidata = False	
 
 					now = int(round(time.time() * 1000000)) 
+					print(now)
+
+		mw.close()
 
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
 		self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
