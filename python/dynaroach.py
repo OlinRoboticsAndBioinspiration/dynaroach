@@ -144,8 +144,8 @@ class DynaRoach(object):
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_CURRENT_POS:
-			self.hall_enc = unpack('<h',data)
-			print(self.hall_enc)
+			self.hall_enc = unpack('<3L',data)
+			print(self.hall_enc*HALL_DEGREES_PER_LSB)
 		elif typeID == cmd.TEST_DFLASH:
 			self.dflash_string= self.dflash_string+''.join(data)
 		elif typeID == cmd.TEST_BATT:
@@ -162,7 +162,6 @@ class DynaRoach(object):
 			memwrite_count = self.packed_data[1]
 			print(self.last_sample_count)
 			print('memcount'+ str(memwrite_count))
-
 			print('Last sample count %d' % self.last_sample_count)
 		elif typeID == cmd.GET_GYRO_CALIB_PARAM:
 			self.gyro_offsets = list(unpack('<fff', data))
@@ -289,6 +288,15 @@ class DynaRoach(object):
 		print("Requesting gyro calibration parameters...")
 		self.radio.send(cmd.STATUS_UNUSED, cmd.GET_GYRO_CALIB_PARAM, [])
 		self.gyro_offsets = None
+
+	def test_hall(self):
+	#todo: update this to work with received data, once I can figure out formatting.
+		hall_current_pos()
+		start = hall_encdata;
+		print("Rotate the input gear by 90 degrees.")
+		hall_current_pos()
+		final = hall_encdata;
+		
 
 	def hall_current_pos(self):
 		self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_CURRENT_POS,[])

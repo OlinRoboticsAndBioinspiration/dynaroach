@@ -76,7 +76,14 @@ def main():
     time.sleep(3)
     print('\nI: Testing gyroscope:\n')
     rb.test_gyro
-    
+
+    print('To start with Wii camera, plug in test board (Arduino and breadboard with infrared LEDS.) Hold the camera about 20cm from the board.')
+    time.sleep(5)
+    print('\nI: Testing camera:\n')
+    print('If you see blue blobs on the graph, the camera is working. If not, move the camera around above the board. If this does not work, camera is not working.')
+    rb.wii_dump
+
+
     rb.__del__()
 
 ### Exception handling
