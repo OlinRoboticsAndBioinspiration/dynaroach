@@ -689,22 +689,22 @@ class Trial():
 				st = line.rstrip('\n').split(',')
 				print(st)
 				if (int(st[1]) == cmd.MOTOR_CONFIG):
-				  m1 = float(st[2])
-				  m2 = float(st[3])
+				  motor1 = float(st[2])
+				  motor2 = float(st[3])
 				  fixed_max = (2**15 - 1)
-				  i1 = fixed_max * m1
-				  i2 = fixed_max * m2
+				  motor1_conv = fixed_max * motor1
+				  motor2_conv = fixed_max * motor2
 
-				  i1_0 = i1%256
-				  i1_1 = i1/256
+				  motor1_byte0 = motor1_conv%256
+				  motor1_byte1 = motor1_conv/256
 
-				  i2_0 = i2%256
-				  i2_1 = i2/256
+				  motor2_byte0 = motor2_conv%256
+				  motor2_byte1 = motor2_conv/256
 
 				  self.state_transitions.append(StateTransition(int(st[0]),\
 															  int(st[1]),\
-															  [i1_0,\
-															  i1_1, i2_0, i2_1]))
+															  [motor1_byte0,\
+															  motor1_byte1, motor2_byte0, motor2_byte1]))
 				else:
 				  self.state_transitions.append(StateTransition(int(st[0]),\
 															  int(st[1]),\
