@@ -83,6 +83,11 @@ def main():
     print('If you see blue blobs on the graph, the camera is working. If not, move the camera around above the board. If this does not work, camera is not working.')
     rb.wii_dump
 
+    print('To test the Hall effect sensor, place the Hall effect breakout board in a gearbox with the board facing away from the input gear magnet.')
+    time.sleep(5)
+    print('\nI:Testing Hall effect sensor:\n')
+    rb.test_hall
+
 
     rb.__del__()
 

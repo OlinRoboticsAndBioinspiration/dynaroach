@@ -196,8 +196,8 @@ class DynaRoach(object):
 			# 	print self.data_cnt, "/", self.last_sample_count
 			
 		elif cmd.DATA_STREAMING:
-			if (len(data) == 35):
-			  datum = list(unpack('<L3f3h2HB4H', data))
+			if (len(data) == 36):
+			  datum = list(unpack('<L3f3h4H12B3H', data))
 
 	def echo(self):
 		'''
@@ -755,7 +755,7 @@ class MCUData():
 			self.accel = np.array(data[:,4:7], dtype=np.short) * MCUData.XL_DEFAULT_SCALE
 			self.bemf = data[:,7:8] * MCUData.BEMF_SCALE
 			self.phase = data[:,8:9]
-			self.hall_state = data[:,9:10]
+			self.hall_state = data[:,9:10]*HALL_DEGREES_PER_LSB
 			self.v_batt = data[:,10:11] * MCUData.VBATT_SCALE
 			self.raw_gyro = data[:,11:] * MCUData.GYRO_SCALE
 

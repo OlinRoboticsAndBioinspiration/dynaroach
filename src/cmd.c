@@ -826,6 +826,201 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
   _T2IF = 0;
 }
 
+void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
+{
+    uByte4 t_ticks, yaw, pitch, roll;
+    uByte2 bemf, v_batt, hall_state;
+
+    unsigned char* xlXYZ;
+    unsigned char kDataLength = 35;
+    unsigned char buffer[kDataLength];
+    static unsigned char buf_idx = 1;
+    StateTransition st;
+    int i;
+
+    unsigned char * wii_ptr; 
+
+    st = stTable[st_idx];
+
+    t_ticks.lval = sclockGetTicks() - trial_start_time;
+    //Get pose estimates
+    if(attIsRunning())
+    {
+        attReadSensorData();
+        attEstimatePose();
+        yaw.fval = attGetYaw();
+        pitch.fval = attGetPitch();
+        roll.fval  = attGetRoll();
+        xlXYZ = xlToString();
+    }
+
+    //Sample back EMF
+    AD1CHS0bits.CH0SA = 0b00001;      //Select AN1 (back EMF) for sampling
+    AD1CON1bits.SAMP = 1;
+    while(!AD1CON1bits.DONE);
+    AD1CON1bits.SAMP = 0;
+    AD1CON1bits.DONE = 0;
+    bemf.sval = ADC1BUF0;
+
+    //Sample battery voltage
+    AD1CHS0bits.CH0SA = 0b00000;      //Select AN0 (battery voltage) for sampling
+    AD1CON1bits.SAMP = 1;
+    while(!AD1CON1bits.DONE);
+    AD1CON1bits.SAMP = 0;
+    AD1CON1bits.DONE = 0;
+    v_batt.sval = ADC1BUF0;
+
+    //Get the state of the hall effect sensor
+    hall_state.sval = encGetPos();
+
+    while (st->timestamp < t_ticks.lval)
+    {
+        // Begin bootloacd ..trackable switching code
+        if(st->cmd == CMD_SET_MOTOR)
+        {
+            if(st->params[1] > 0 && tms == 0)
+            {
+                MD_LED_1 = 1;
+                MD_LED_2 = 1;
+                tms = 1;
+            }else if(st->params[1] == 0 && tms == 1)
+            {
+                MD_LED_1 = 0;
+                MD_LED_2 = 0;
+                tms = 0;
+            }
+        }else if (st->cmd == CMD_SET_SMA)
+        {
+            if(st->params[0] == SMA_LEFT)
+            {
+                if(st->params[1] > 0 && tls == 0)
+                {
+                    MD_LED_1 = 0;
+                    tls = 1;
+                }else if (st->params[1] == 0 && tls == 1)
+                {
+                    MD_LED_1 = 1;
+                    tls = 0;
+                }
+            }else if(st->params[0] == SMA_RIGHT)
+            {
+                if(st->params[1] > 0 && trs == 0)
+                {
+                    MD_LED_2 = 0;
+                    trs = 1;
+                }else if (st->params[1] == 0 && trs == 1)
+                {
+                    MD_LED_2 = 1;
+                    trs = 0;
+                }
+            }
+        }
+
+        if (do_sweep == 1)
+        {
+          do_sweep = 0;
+          MotorConfig.rising_edge_duty_cycle = 0.0f;
+          MotorConfig.falling_edge_duty_cycle = 0.0f;
+
+        }
+
+        cmd_func[st->cmd](STATUS_UNUSED, 2, st->params);
+        st_idx++;
+        if (st_idx == st_cnt)
+        {
+            attSetEstimateRunning(0);
+            MD_LED_1 = 0;
+            MD_LED_2 = 0;
+            //Turn off SMA
+            mcSetDutyCycle(3, 0);
+            //Turn off Motor
+            MotorConfig.rising_edge_duty_cycle = 0.0f;
+            MotorConfig.falling_edge_duty_cycle = 0.0f;
+            mcSetDutyCycle(1, 0);
+
+            //Free up the resources
+            int i;
+            for (i=0; i < st_cnt; ++i)
+            {
+              stFree(stTable[i]);
+            }
+            free(stTable);
+
+            _T1IE = 0;
+            break;
+        }
+        else
+        {
+            st = stTable[st_idx];
+        }
+    }
+
+    //Increment motor speeds for sweep
+    if(do_sweep)
+    {
+      float dt = (t_ticks.lval - stTable[st_idx-1]->timestamp);
+      float percent = dt/(stTable[st_idx]->timestamp - stTable[st_idx-1]->timestamp);
+
+      float motor = sweep_stop_speed*(percent)+sweep_start_speed*(1-percent);
+      //if (motor < 30 && motor > -30) {
+        MotorConfig.falling_edge_duty_cycle = motor;
+        MotorConfig.rising_edge_duty_cycle = motor;
+        mcSetDutyCycle(1, motor);
+      //}
+    }
+
+    if(sample_cnt.sval % 50 == 0)
+    {
+        wii_ptr = wiiReadData();//there will be 50 identical wii positions written to memory because we can't sample that fast.  Fix this?
+    }
+
+    if (saveData2Flash == 1)
+    {
+        for(i = 0; i < 4; i++)
+        {
+            buffer[i] = t_ticks.cval[i];
+            buffer[i+4] = yaw.cval[i];
+            buffer[i+8] = pitch.cval[i];
+            buffer[i+12] = roll.cval[i];
+        }
+
+        buffer[16] = xlXYZ[0];
+        buffer[17] = xlXYZ[1];
+        buffer[18] = xlXYZ[2];
+        buffer[19] = xlXYZ[3];
+        buffer[20] = xlXYZ[4];
+        buffer[21] = xlXYZ[5];
+        buffer[22] = bemf.cval[0];
+        buffer[23] = bemf.cval[1];
+        buffer[24] = 0;
+        buffer[25] = 0;
+        buffer[26] = hall_state.cval[0];//should be in raw form
+        buffer[27] = hall_state.cval[0];
+        buffer[28] = v_batt.cval[0];
+        buffer[29] = v_batt.cval[1];
+
+        for(i = 0; i<12;i++)
+        {
+            buffer[30+i] = wii_ptr[i];
+        }
+
+        gyroDumpData(buffer+42);
+
+        dfmemWriteBuffer(buffer, kDataLength, MemLoc.index.byte, buf_idx);
+        MemLoc.index.byte += kDataLength;
+        sample_cnt.sval++;
+        if(MemLoc.index.byte + kDataLength > 264)
+        {
+            MD_LED_1 = ~MD_LED_1;
+            dfmemWriteBuffer2MemoryNoErase(MemLoc.index.page++, buf_idx);
+            MemLoc.index.byte = 0;
+            buf_idx ^= 0x01;
+        }
+    }
+
+    _T1IF = 0;
+}
+
 /******************************************************************************
 *******************INTERNAL FUNCTION POINTER QUEUE*****************************
 *******************************************************************************/

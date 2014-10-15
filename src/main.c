@@ -172,7 +172,7 @@ int main ( void )
 	//xlSetup();
 	dfmemSetup();
 	sclockSetup();
-	// timer1Setup();
+	timer1Setup();
 	// timer2Setup();
 	timer7Setup();
 
