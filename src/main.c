@@ -168,7 +168,7 @@ int main ( void )
 	//END ADC SETUP
 
 	mcSetup();
-	//gyroSetup();
+	gyroSetup();
 	//xlSetup();
 	dfmemSetup();
 	sclockSetup();
@@ -192,7 +192,7 @@ int main ( void )
 	LED_1 = ~LED_1;
 	delay_ms(1000);
 	encSetup();
-	wiiSetupBasic();
+	//wiiSetupBasic();
 	LED_1 = ~LED_1;
 
 	excSetup();
