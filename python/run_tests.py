@@ -40,10 +40,12 @@
 
 import traceback
 import dynaroach
+import time
+import sys
 
-RADIO_DEV_NAME  = '/dev/ttyUSB3'# or 'COMx'
+RADIO_DEV_NAME  = '/dev/ttyUSB0'# or 'COMx'
 RADIO_BAUD_RATE = 230400
-RADIO_DEST_ADDR = '\x00\x15'
+RADIO_DEST_ADDR = '\x00\x16'
 
 def main():
     rb = dynaroach.DynaRoach(RADIO_DEV_NAME,            \
