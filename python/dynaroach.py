@@ -142,10 +142,10 @@ class DynaRoach(object):
 		if typeID == cmd.TEST_ACCEL:
 			self.acc_res = unpack('<3h', data)
 		elif typeID == cmd.TEST_GYRO:
-			self.gyro_res= unpack('<3h', data)  
+			self.gyro_res= unpack('<3h', data)
 		elif typeID == cmd.HALL_CURRENT_POS:
-			self.hall_enc = unpack('<3L',data)
-			print(self.hall_enc*HALL_DEGREES_PER_LSB)
+			self.hall_enc = unpack('H',data)
+ 			print self.hall_enc, "hall enc"
 		elif typeID == cmd.TEST_DFLASH:
 			self.dflash_string= self.dflash_string+''.join(data)
 		elif typeID == cmd.TEST_BATT:
