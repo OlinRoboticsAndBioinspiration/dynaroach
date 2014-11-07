@@ -27,7 +27,7 @@ from matplotlib import pyplot as plt
 DEFAULT_BAUD_RATE = 230400
 
 #DEFAULT_DEST_ADDR = '\x00\x11'
-DEFAULT_DEST_ADDR = '\x00\x18'
+DEFAULT_DEST_ADDR = '\x00\x16'
 
 DEFAULT_DEV_NAME = '/dev/ttyUSB0' 
 SMA_RIGHT = 0
@@ -144,8 +144,10 @@ class DynaRoach(object):
 		elif typeID == cmd.TEST_GYRO:
 			self.gyro_res= unpack('<3h', data)  
 		elif typeID == cmd.HALL_CURRENT_POS:
-			self.hall_enc = unpack('<3L',data)
-			print(self.hall_enc*HALL_DEGREES_PER_LSB)
+			print(len(data))
+			self.hall_enc = unpack('H',data)
+			#print(self.hall_enc*HALL_DEGREES_PER_LSB)
+			print(self.hall_enc)
 		elif typeID == cmd.TEST_DFLASH:
 			self.dflash_string= self.dflash_string+''.join(data)
 		elif typeID == cmd.TEST_BATT:
