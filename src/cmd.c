@@ -41,6 +41,14 @@ static struct {
   float falling_edge_duty_cycle;
 } MotorConfig;
 
+static struct {
+  // keep track of absolute rotations in hall ticks
+  long phase_accumulator;
+  // number of full robot strides
+  int strides;
+  // last measurement directly from hall
+  int last_phase;
+} PhaseState;
 
 unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
 
@@ -58,6 +66,9 @@ void(*cmd_func[MAX_CMD_FUNC_SIZE])(unsigned char, unsigned char, unsigned char*)
 StateTransition* stTable;
 unsigned char st_idx;
 static unsigned long trial_start_time = 0;
+
+// Is trial currently running
+static int trial_running;
 
 static void cmdNop(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdTxSavedData(unsigned char status, unsigned char length, unsigned char *frame);
@@ -125,6 +136,8 @@ void cmdSetup(void)
 
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
+
+    trial_running = 0;
 }
 
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
@@ -327,6 +340,15 @@ static void cmdRunTrial(unsigned char status, unsigned char length, unsigned cha
     attSetEstimateRunning(1);
     trial_start_time = sclockGetTicks();
     sample_cnt.sval = 0;
+
+    // Reset internal counter for halleffect
+    PhaseState.phase_accumulator = 0;
+    PhaseState.strides = 0;
+    PhaseState.last_phase = encGetPos();
+
+    trial_running = 1;
+
+    // Enable timer 1
     _T1IE = 1;
 }
 
@@ -601,10 +623,11 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
 {
     uByte4 t_ticks, yaw, pitch, roll;
     uByte2 bemf, v_batt;
+    uByte4 halldata;
     unsigned char hall_state = 0;
 
     unsigned char* xlXYZ;
-    unsigned char kDataLength = 35;
+    unsigned char kDataLength = 39;
     unsigned char buffer[kDataLength];
     static unsigned char buf_idx = 1;
     StateTransition st;
@@ -639,6 +662,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
     AD1CON1bits.SAMP = 0;
     AD1CON1bits.DONE = 0;
     v_batt.sval = ADC1BUF0;
+
+    halldata.lval = PhaseState.phase_accumulator;
 
     //Get the state of the hall effect sensor
     hall_state = PORTBbits.RB7;
@@ -716,7 +741,11 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
             }
             free(stTable);
 
+            // Trial no longer running
+            trial_running = 0;
+            // Turn off timer
             _T1IE = 0;
+
             break;
         }else
         {
@@ -746,6 +775,7 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
             buffer[i+4] = yaw.cval[i];
             buffer[i+8] = pitch.cval[i];
             buffer[i+12] = roll.cval[i];
+            buffer[i+35] = halldata.cval[i];
         }
 
         buffer[16] = xlXYZ[0];
@@ -867,12 +897,29 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
     sendCurrentSensors();
   }
 
-  short hall = PORTBbits.RB7;
-  if (prevHall != 0 && 0 == hall) {
-    motor_falling_edge();
-  } else if(0 == prevHall && hall != 0) {
-    motor_rising_edge();
+  // Only do phase calculations if trial is running
+  if (trial_running == 1) {
+    int cur_phase = encGetPos();
+
+    int hall_diff = cur_phase - PhaseState.last_phase;
+
+    if (abs(hall_diff) > FULLROT/4) {
+      int sign_diff = abs(hall_diff) / hall_diff;
+      hall_diff += FULLROT * -sign_diff;
+    }
+
+    PhaseState.phase_accumulator += hall_diff;
+    PhaseState.last_phase = cur_phase;
+
+    // TODO FIXME
+    short hall = PORTBbits.RB7;
+    if (prevHall != 0 && 0 == hall) {
+      motor_falling_edge();
+    } else if(0 == prevHall && hall != 0) {
+      motor_rising_edge();
+    }
+    prevHall = hall;
   }
-  prevHall = hall;
+
   _T2IF = 0;
 }

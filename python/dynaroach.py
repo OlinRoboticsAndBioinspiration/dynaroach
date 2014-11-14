@@ -31,7 +31,7 @@ GYRO_LSB2DEG = 0.0695652174  # 14.375 LSB/(deg/s)
 GYRO_LSB2RAD = 0.00121414209
 
 DFMEM_PAGE_SIZE = 264
-SAMPLE_BYTES = 35
+SAMPLE_BYTES = 39
 
 TICKS_PER_MILLI     = 625.0
 XL_CNTS_PER_G       = 256.0
@@ -88,7 +88,7 @@ class DynaRoach():
         elif typeID == cmd.HALL_CURRENT_POS:
             print "hall_data", unpack('1H', data)
         elif typeID == cmd.TX_SAVED_DATA:
-            datum = list(unpack('<L3f3h2HB4H', data))
+            datum = list(unpack('<L3f3h2HB4Hi', data))
             self.state_data.append(datum)
             self.data_cnt += 1
             if self.data_cnt % 100 == 0:
@@ -331,7 +331,7 @@ class DynaRoach():
         print('%d total state data were received.' % self.data_cnt)
         state_data_arr = np.array(self.state_data)
         print state_data_arr 
-        fmt = '%d, %f, %f, %f, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d'
+        fmt = '%d, %f, %f, %f, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d, %d'
         np.savetxt(fname, state_data_arr, fmt)
         #np.savetxt(self.datestring() + ".csv", state_data_arr, fmt)
         print("State data saved to file: " + fname)

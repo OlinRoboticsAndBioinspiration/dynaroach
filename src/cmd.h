@@ -9,6 +9,12 @@ typedef union {
 } uByte4;
 
 typedef union {
+    long lval;
+    short sval[2];
+    unsigned char cval[4];
+} Byte4;
+
+typedef union {
     unsigned short sval;
     unsigned char cval[2];
 } uByte2;
