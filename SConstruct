@@ -43,6 +43,7 @@ imageProcLibFiles = [imageProc + "/" + n for n in [
     "init_default.c",
     "carray.c",
     "mac_packet.c",
+    "ams-enc.c",
     "at86rf231_driver.c"]]
 dynaroachFiles = Glob("src/*.c")
 staticLibs = [xcCompiler + "/lib/dsPIC33F/libp33FJ128MC706-elf.a", xcCompiler + "/lib/libq-elf.a"]

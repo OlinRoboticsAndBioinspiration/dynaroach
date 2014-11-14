@@ -67,6 +67,7 @@
 #define CMD_SET_MOTOR_CONFIG    0x19
 #define CMD_RESET               0x1A
 #define CMD_ECHO                0x1F
+#define CMD_HALL_CURRENT_POS    0x0F
 
 #define TIMER1_FCY          250
 

@@ -35,6 +35,7 @@
 #include "ppool.h"
 #include "spi_controller.h"
 #include "cmd.h"
+#include "ams-enc.h"
 
 
 void initDma0(void)
@@ -142,6 +143,7 @@ int main ( void )
     timer1Setup();
     timer2Setup();
     cmdSetup();
+    encSetup();
 
 
     attSetup(1.0/TIMER1_FCY);

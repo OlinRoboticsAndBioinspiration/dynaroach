@@ -16,6 +16,7 @@
 #include "statetransition.h"
 #include "led.h"
 #include "adc.h"
+#include "ams-enc.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
@@ -79,6 +80,7 @@ static void cmdGetGyroCalibParam(unsigned char status, unsigned char length, uns
 static void cmdSetDataStreaming(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame);
 static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 //Delete these once trackable management code is working
@@ -119,6 +121,8 @@ void cmdSetup(void)
     cmd_func[CMD_SET_MOTOR_CONFIG] = &cmdSetMotorConfig;
     cmd_func[CMD_RESET] = &cmdReset;
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
+    cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
+
     MotorConfig.rising_edge_duty_cycle = 0;
     MotorConfig.falling_edge_duty_cycle = 0;
 }
@@ -559,6 +563,16 @@ static void cmdReset(unsigned char status, unsigned char length, unsigned char *
 static void cmdNop(unsigned char status, unsigned char length, unsigned char *frame)
 {
     Nop();//do nothing
+}
+
+
+static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame) {
+    LED_2 = ~LED_2;
+
+    uByte2 halldata;
+    halldata.sval = encGetPos();
+    send(status, 2, halldata.cval, CMD_HALL_CURRENT_POS);
+    LED_2 = ~LED_2;
 }
 
 static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type)
