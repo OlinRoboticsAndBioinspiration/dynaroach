@@ -388,6 +388,7 @@ class Trial():
             for line in infile.readlines():
                 st = line.rstrip('\n').split(',')
                 print(st)
+                # Hack to load motor configs as floating point
                 if (int(st[1]) == cmd.MOTOR_CONFIG):
                   m1 = float(st[2])
                   m2 = float(st[3])
@@ -395,11 +396,18 @@ class Trial():
                   i1 = fixed_max * m1
                   i2 = fixed_max * m2
 
-                  i1_0 = i1%256
-                  i1_1 = i1/256
+                  # Working with unsigned numbers for data managmenet.
+                  # Manipulate accordingly
+                  if m1 < 0:
+                      i1 = 2**16 + i1
+                  if m2 < 0:
+                      i2 = 2**16 + i2
 
-                  i2_0 = i2%256
-                  i2_1 = i2/256
+                  i1_0 = int(i1)%256
+                  i1_1 = int(i1)/256
+
+                  i2_0 = int(i2)%256
+                  i2_1 = int(i2)/256
 
                   self.state_transitions.append(StateTransition(int(st[0]),\
                                                               int(st[1]),\

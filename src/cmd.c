@@ -28,6 +28,10 @@
 //#define ROBOT 0
 #define ROBOT 1
 
+#define STRIDE ((int32_t) 81920) //2**14 * 5
+#define FULLROT 16384
+
+
 static union {
     struct {
         unsigned int page;
@@ -37,13 +41,13 @@ static union {
 } MemLoc;
 
 static struct {
-  float rising_edge_duty_cycle;
-  float falling_edge_duty_cycle;
+  float phase_1;
+  float phase_2;
 } MotorConfig;
 
 static struct {
   // keep track of absolute rotations in hall ticks
-  long phase_accumulator;
+  int32_t phase_accumulator;
   // number of full robot strides
   int strides;
   // last measurement directly from hall
@@ -134,8 +138,8 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
 
-    MotorConfig.rising_edge_duty_cycle = 0;
-    MotorConfig.falling_edge_duty_cycle = 0;
+    MotorConfig.phase_1 = 0;
+    MotorConfig.phase_2 = 0;
 
     trial_running = 0;
 }
@@ -147,25 +151,16 @@ static void cmdSetMotor(unsigned char status, unsigned char length, unsigned cha
 
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame)
 {
-  intT rising_duty;//union => let you access in integer or byte
-  intT falling_duty;
-  rising_duty.c[0] = frame[0];//LSB
-  rising_duty.c[1] = frame[1];//MSB
-  falling_duty.c[0] = frame[2];
-  falling_duty.c[1] = frame[3];
+  intT phase_1;//union => let you access in integer or byte
+  intT phase_2;
+  phase_1.c[0] = frame[0];//LSB
+  phase_1.c[1] = frame[1];//MSB
+  phase_2.c[0] = frame[2];
+  phase_2.c[1] = frame[3];
 
   //mcSetDutyCycle takes inputs of -100 to 100
-  MotorConfig.rising_edge_duty_cycle = ((float)rising_duty.i/INT_MAX)*100;
-  MotorConfig.falling_edge_duty_cycle = ((float)falling_duty.i/INT_MAX)*100;
-
-  LED_2 = ~LED_2;
-  LED_1 = ~LED_1;
-  short hall = PORTBbits.RB7;
-  if (0 == hall) {
-    mcSetDutyCycle(1, MotorConfig.falling_edge_duty_cycle);
-  } else {
-    mcSetDutyCycle(1, MotorConfig.rising_edge_duty_cycle);
-  }
+  MotorConfig.phase_1 = ((double)phase_1.i/INT_MAX)*100;
+  MotorConfig.phase_2 = ((double)phase_2.i/INT_MAX)*100;
 }
 
 static void cmdSetSma(unsigned char status, unsigned char length, unsigned char *frame)
@@ -714,8 +709,8 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
         if (do_sweep == 1)
         {
           do_sweep = 0;
-          MotorConfig.rising_edge_duty_cycle = 0.0f;
-          MotorConfig.falling_edge_duty_cycle = 0.0f;
+          MotorConfig.phase_1 = 0.0f;
+          MotorConfig.phase_2 = 0.0f;
 
         }
 
@@ -724,13 +719,11 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
         if (st_idx == st_cnt)
         {
             attSetEstimateRunning(0);
-            MD_LED_1 = 0;
-            MD_LED_2 = 0;
             //Turn off SMA
             mcSetDutyCycle(3, 0);
             //Turn off Motor
-            MotorConfig.rising_edge_duty_cycle = 0.0f;
-            MotorConfig.falling_edge_duty_cycle = 0.0f;
+            MotorConfig.phase_1 = 0.0f;
+            MotorConfig.phase_2 = 0.0f;
             mcSetDutyCycle(1, 0);
 
             //Free up the resources
@@ -760,11 +753,10 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
       float percent = dt/(stTable[st_idx]->timestamp - stTable[st_idx-1]->timestamp);
 
       float motor = sweep_stop_speed*(percent)+sweep_start_speed*(1-percent);
-      //if (motor < 30 && motor > -30) {
-        MotorConfig.falling_edge_duty_cycle = motor;
-        MotorConfig.rising_edge_duty_cycle = motor;
-        mcSetDutyCycle(1, motor);
-      //}
+
+      MotorConfig.phase_1 = motor;
+      MotorConfig.phase_2 = motor;
+      mcSetDutyCycle(1, motor);
     }
 
     if (saveData2Flash == 1)
@@ -799,7 +791,6 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
         sample_cnt.sval++;
         if(MemLoc.index.byte + kDataLength > 264)
         {
-            MD_LED_1 = ~MD_LED_1;
             dfmemWriteBuffer2MemoryNoErase(MemLoc.index.page++, buf_idx);
             MemLoc.index.byte = 0;
             buf_idx ^= 0x01;
@@ -848,7 +839,6 @@ void sendCurrentSensors() {
 
     //Get the state of the hall effect sensor
     hall_state = PORTBbits.RB7;
-    MD_LED_1 = ~MD_LED_1;
 
     for(i = 0; i < 4; i++)
     {
@@ -878,19 +868,6 @@ void sendCurrentSensors() {
     send(status, kDataLength, buffer, CMD_SET_STREAMING);
 }
 
-
-void motor_rising_edge() {
-     MD_LED_2 = 1;
-     mcSetDutyCycle(1, MotorConfig.rising_edge_duty_cycle);
-}
-
-void motor_falling_edge() {
-     MD_LED_2 = 0;
-     mcSetDutyCycle(1, MotorConfig.falling_edge_duty_cycle);
-}
-
-static int prevHall = 0;
-
 void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 {
   if (is_data_streaming && (++streamMod)%50 == 0) {
@@ -903,7 +880,7 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 
     int hall_diff = cur_phase - PhaseState.last_phase;
 
-    if (abs(hall_diff) > FULLROT/4) {
+    if (abs(hall_diff) > FULLROT/2) {
       int sign_diff = abs(hall_diff) / hall_diff;
       hall_diff += FULLROT * -sign_diff;
     }
@@ -911,14 +888,15 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
     PhaseState.phase_accumulator += hall_diff;
     PhaseState.last_phase = cur_phase;
 
-    // TODO FIXME
-    short hall = PORTBbits.RB7;
-    if (prevHall != 0 && 0 == hall) {
-      motor_falling_edge();
-    } else if(0 == prevHall && hall != 0) {
-      motor_rising_edge();
+    int32_t percent = labs((PhaseState.phase_accumulator % STRIDE));
+
+    if (percent > STRIDE/((int32_t) 2)) {
+      MD_LED_2 = 1;
+      mcSetDutyCycle(1, MotorConfig.phase_1);
+    } else {
+      MD_LED_2 = 0;
+      mcSetDutyCycle(1, MotorConfig.phase_2);
     }
-    prevHall = hall;
   }
 
   _T2IF = 0;
