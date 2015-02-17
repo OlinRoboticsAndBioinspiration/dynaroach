@@ -9,3 +9,4 @@ dist/
 *.elf
 
 .sconsign.dblite
+hexout.txt
