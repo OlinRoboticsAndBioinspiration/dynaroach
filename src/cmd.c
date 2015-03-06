@@ -25,8 +25,8 @@
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
 
 
-//#define ROBOT 0
-#define ROBOT 1
+#define ROBOT 0
+//#define ROBOT 1
 
 #define STRIDE ((int32_t) 81920) //2**14 * 5
 #define FULLROT 16384
@@ -685,10 +685,11 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
     //Get the state of the hall effect sensor
     hall_state = PORTBbits.RB7;
 
+
     while (st->timestamp < t_ticks.lval)
     {
         // Begin trackable switching code
-        if(st->cmd == CMD_SET_MOTOR)
+        if(st->cmd == CMD_SET_MOTOR_CONFIG)
         {
             if(st->params[1] > 0 && tms == 0)
             {
@@ -917,10 +918,10 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
   int32_t percent = labs((PhaseState.phase_accumulator % STRIDE));
 
   if (percent > STRIDE/((int32_t) 2)) {
-    MD_LED_2 = 1;
+    //MD_LED_2 = 1;
     mcSetDutyCycle(1, MotorConfig.phase_1);
   } else {
-    MD_LED_2 = 0;
+    //MD_LED_2 = 0;
     mcSetDutyCycle(1, MotorConfig.phase_2);
   }
 

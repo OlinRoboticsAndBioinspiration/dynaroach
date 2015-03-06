@@ -142,15 +142,16 @@ int main ( void )
     LED_2 = 0;
     LED_3 = 0;
 
+    MD_LED_2 = 1;
     delay_ms(100);
     mcSetup();
     LED_1 = 1;
     delay_ms(100);
-    gyroSetup();
+    //gyroSetup();
     LED_1 = 0;
     LED_2 = 1;
     delay_ms(100);
-    xlSetup();
+    //xlSetup();
     LED_1 = 1;
     LED_2 = 1;
     delay_ms(100);
@@ -176,7 +177,7 @@ int main ( void )
     LED_2 = 0;
     LED_3 = 0;
     delay_ms(100);
-    encSetup();
+    //encSetup();
     LED_1 = 1;
     delay_ms(100);
     attSetup(1.0/TIMER1_FCY);
