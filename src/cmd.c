@@ -52,6 +52,8 @@ static struct {
   int strides;
   // last measurement directly from hall
   int last_phase;
+  // On first reading
+  int first_reading;
 } PhaseState;
 
 unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
@@ -96,6 +98,7 @@ static void cmdSetDataStreaming(unsigned char status, unsigned char length, unsi
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdGetPhaseAccum(unsigned char status, unsigned char length, unsigned char *frame);
 static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 
 //Delete these once trackable management code is working
@@ -137,11 +140,19 @@ void cmdSetup(void)
     cmd_func[CMD_RESET] = &cmdReset;
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
+    cmd_func[CMD_GET_PHASE_ACCUM] = &cmdGetPhaseAccum;
 
     MotorConfig.phase_1 = 0;
     MotorConfig.phase_2 = 0;
 
     trial_running = 0;
+}
+
+
+void encoderZeroSet(void) {
+    PhaseState.first_reading = 1;
+    PhaseState.last_phase = 0;
+    PhaseState.strides = 0;
 }
 
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
@@ -161,6 +172,7 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
   //mcSetDutyCycle takes inputs of -100 to 100
   MotorConfig.phase_1 = ((double)phase_1.i/INT_MAX)*100;
   MotorConfig.phase_2 = ((double)phase_2.i/INT_MAX)*100;
+  mcSetDutyCycle(1, MotorConfig.phase_1);
 }
 
 static void cmdSetSma(unsigned char status, unsigned char length, unsigned char *frame)
@@ -337,6 +349,7 @@ static void cmdRunTrial(unsigned char status, unsigned char length, unsigned cha
     sample_cnt.sval = 0;
 
     // Reset internal counter for halleffect
+    PhaseState.first_reading = 1;
     PhaseState.phase_accumulator = 0;
     PhaseState.strides = 0;
     PhaseState.last_phase = encGetPos();
@@ -589,6 +602,15 @@ static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsign
     uByte2 halldata;
     halldata.sval = encGetPos();
     send(status, 2, halldata.cval, CMD_HALL_CURRENT_POS);
+    LED_2 = ~LED_2;
+}
+
+static void cmdGetPhaseAccum(unsigned char status, unsigned char length, unsigned char *frame) {
+    LED_2 = ~LED_2;
+
+    Byte4 phaseAccum;
+    phaseAccum.lval = PhaseState.phase_accumulator;
+    send(status, 4, phaseAccum.cval, CMD_GET_PHASE_ACCUM);
     LED_2 = ~LED_2;
 }
 
@@ -874,29 +896,32 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
     sendCurrentSensors();
   }
 
-  // Only do phase calculations if trial is running
-  if (trial_running == 1) {
-    int cur_phase = encGetPos();
+  int cur_phase = encGetPos();
 
-    int hall_diff = cur_phase - PhaseState.last_phase;
+  int hall_diff = cur_phase - PhaseState.last_phase;
 
-    if (abs(hall_diff) > FULLROT/2) {
-      int sign_diff = abs(hall_diff) / hall_diff;
-      hall_diff += FULLROT * -sign_diff;
-    }
+  if (abs(hall_diff) > FULLROT/2) {
+    int sign_diff = abs(hall_diff) / hall_diff;
+    hall_diff += FULLROT * -sign_diff;
+  }
 
-    PhaseState.phase_accumulator += hall_diff;
-    PhaseState.last_phase = cur_phase;
+  PhaseState.phase_accumulator += hall_diff;
+  PhaseState.last_phase = cur_phase;
 
-    int32_t percent = labs((PhaseState.phase_accumulator % STRIDE));
+  // Reset the zero point
+  if (PhaseState.first_reading == 1) {
+    PhaseState.phase_accumulator = 0;
+    PhaseState.first_reading = 0;
+  }
 
-    if (percent > STRIDE/((int32_t) 2)) {
-      MD_LED_2 = 1;
-      mcSetDutyCycle(1, MotorConfig.phase_1);
-    } else {
-      MD_LED_2 = 0;
-      mcSetDutyCycle(1, MotorConfig.phase_2);
-    }
+  int32_t percent = labs((PhaseState.phase_accumulator % STRIDE));
+
+  if (percent > STRIDE/((int32_t) 2)) {
+    MD_LED_2 = 1;
+    mcSetDutyCycle(1, MotorConfig.phase_1);
+  } else {
+    MD_LED_2 = 0;
+    mcSetDutyCycle(1, MotorConfig.phase_2);
   }
 
   _T2IF = 0;

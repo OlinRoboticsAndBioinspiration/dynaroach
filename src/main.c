@@ -142,33 +142,43 @@ int main ( void )
     LED_2 = 0;
     LED_3 = 0;
 
+    delay_ms(100);
     mcSetup();
     LED_1 = 1;
+    delay_ms(100);
     gyroSetup();
     LED_1 = 0;
     LED_2 = 1;
+    delay_ms(100);
     xlSetup();
     LED_1 = 1;
     LED_2 = 1;
+    delay_ms(100);
     dfmemSetup();
     LED_1 = 0;
     LED_2 = 0;
     LED_3 = 1;
+    delay_ms(100);
     sclockSetup();
     LED_1 = 1;
+    delay_ms(100);
     timer1Setup();
     LED_1 = 0;
     LED_2 = 1;
+    delay_ms(100);
     timer2Setup();
     LED_1 = 1;
     LED_2 = 1;
+    delay_ms(100);
     cmdSetup();
     MD_LED_1 = 1;
     LED_1 = 0;
     LED_2 = 0;
     LED_3 = 0;
+    delay_ms(100);
     encSetup();
     LED_1 = 1;
+    delay_ms(100);
     attSetup(1.0/TIMER1_FCY);
     char j;
     for(j=0; j<6; j++){
@@ -180,12 +190,13 @@ int main ( void )
         delay_ms(100);
     }
 
-
     LED_1 = 1;
     LED_2 = 1;
     LED_3 = 1;
     MD_LED_1 = 0;
     MD_LED_2 = 0;
+
+    encoderZeroSet();
 
     //radioDeleteQueues();
     while(1){

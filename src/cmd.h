@@ -24,4 +24,6 @@ extern unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
 void cmdSetup(void);
 void cmdHandleRadioRxBuffer(void);
 
+void encoderZeroSet(void);
+
 #endif // __CMD_H

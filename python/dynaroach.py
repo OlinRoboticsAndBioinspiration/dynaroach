@@ -21,7 +21,7 @@ from lib.basestation import BaseStation
 from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
-DEFAULT_DEST_ADDR = '\x00\x16'
+DEFAULT_DEST_ADDR = '\x00\x15'
 DEFAULT_DEV_NAME = '/dev/tty.usbserial-A8THYF0S' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -87,6 +87,8 @@ class DynaRoach():
             print unpack('2H', data)
         elif typeID == cmd.HALL_CURRENT_POS:
             print "hall_data", unpack('1H', data)
+        elif typeID == cmd.GET_PHASE_ACCUM:
+            print "phase_data", unpack('1i', data)
         elif typeID == cmd.TX_SAVED_DATA:
             datum = list(unpack('<L3f3h2HB4Hi', data))
             self.state_data.append(datum)
@@ -127,6 +129,9 @@ class DynaRoach():
 
     def hall_current_pos(self):
         self.radio.send(cmd.STATUS_UNUSED, cmd.HALL_CURRENT_POS, [])
+
+    def get_phase_accum(self):
+        self.radio.send(cmd.STATUS_UNUSED, cmd.GET_PHASE_ACCUM, [])
 
     def set_motor_config(self, rising_duty_cycle, falling_duty_cycle):
       '''

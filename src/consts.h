@@ -68,6 +68,7 @@
 #define CMD_RESET               0x1A
 #define CMD_ECHO                0x1F
 #define CMD_HALL_CURRENT_POS    0x0F
+#define CMD_GET_PHASE_ACCUM     0x1B
 
 #define TIMER1_FCY          250
 
