@@ -144,6 +144,17 @@ class DynaRoach():
       self.radio.send(cmd.STATUS_UNUSED, cmd.MOTOR_CONFIG, cmd_data)
       time.sleep(0.5)
 
+    def set_phase_offset(self, offset):
+      '''
+      Set the phase offset when using 2 phase control
+      offset is is in radians
+      '''
+      max_int = 2**15;
+      normal_offset = offset / (2 * np.pi)
+      cmd_data = str(pack('h', int(max_int * normal_offset)))
+      self.radio.send(cmd.STATUS_UNUSED, cmd.SET_PHASE_OFFSET, cmd_data)
+      time.sleep(0.5)
+
     def set_data_streaming(self, val):
       data = ''.join(chr(val));
       self.radio.send(cmd.STATUS_UNUSED, cmd.DATA_STREAMING, data)
@@ -153,7 +164,7 @@ class DynaRoach():
       self.radio.send(cmd.STATUS_UNUSED, cmd.RESET, [])
       if do_wait:
         time.sleep(11)
-    
+
     def configure_trial(self, trial):
         '''
             Description:
@@ -418,6 +429,17 @@ class Trial():
                                                               int(st[1]),\
                                                               [i1_0,\
                                                               i1_1, i2_0, i2_1]))
+                elif (int(st[1]) == cmd.SET_PHASE_OFFSET):
+                    offset_in_deg = float(st[2])
+                    normed_offset = (offset_in_deg / 360.0) * (2**15)
+                    i_0 = int(normed_offset)%256
+                    i_1 = int(normed_offset)/256
+                    print "Got a phase accumulator"
+                    self.state_transitions.append(StateTransition(int(st[0]),\
+                                                                  int(st[1]),\
+                                                                  [i_0,\
+                                                                  i_1]))
+
                 else:
                   self.state_transitions.append(StateTransition(int(st[0]),\
                                                               int(st[1]),\

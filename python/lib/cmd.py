@@ -27,5 +27,6 @@ RESET           = 0x1A
 ECHO            = 0x1F
 HALL_CURRENT_POS = 0x0F
 GET_PHASE_ACCUM = 0x1B
+SET_PHASE_OFFSET = 0x1C
 
 

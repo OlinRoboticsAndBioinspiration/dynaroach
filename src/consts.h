@@ -69,6 +69,8 @@
 #define CMD_ECHO                0x1F
 #define CMD_HALL_CURRENT_POS    0x0F
 #define CMD_GET_PHASE_ACCUM     0x1B
+#define CMD_SET_PHASE_OFFSET    0x1C
+
 
 #define TIMER1_FCY          250
 

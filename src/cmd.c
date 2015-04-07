@@ -48,6 +48,8 @@ static struct {
 static struct {
   // keep track of absolute rotations in hall ticks
   int32_t phase_accumulator;
+  // Initial offset when varrying phase
+  int32_t phase_accumulator_offset;
   // number of full robot strides
   int strides;
   // last measurement directly from hall
@@ -96,6 +98,7 @@ static void cmdRunGyroCalib(unsigned char status, unsigned char length, unsigned
 static void cmdGetGyroCalibParam(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetDataStreaming(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdSetPhaseOffset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdGetPhaseAccum(unsigned char status, unsigned char length, unsigned char *frame);
@@ -137,6 +140,7 @@ void cmdSetup(void)
     cmd_func[CMD_GET_GYRO_CALIB_PARAM] = &cmdGetGyroCalibParam;
     cmd_func[CMD_SET_STREAMING] = &cmdSetDataStreaming;
     cmd_func[CMD_SET_MOTOR_CONFIG] = &cmdSetMotorConfig;
+    cmd_func[CMD_SET_PHASE_OFFSET] = &cmdSetPhaseOffset;
     cmd_func[CMD_RESET] = &cmdReset;
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
     cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
@@ -173,6 +177,22 @@ static void cmdSetMotorConfig(unsigned char status, unsigned char length, unsign
   MotorConfig.phase_1 = ((double)phase_1.i/INT_MAX)*100;
   MotorConfig.phase_2 = ((double)phase_2.i/INT_MAX)*100;
   mcSetDutyCycle(1, MotorConfig.phase_1);
+}
+
+/*
+ * Set the phase offset and reset the accumulator
+ * frame consists of 1 integer ranging from 0 - INT_MAX
+ */
+static void cmdSetPhaseOffset(unsigned char status, unsigned char length, unsigned char *frame)
+{
+  intT offset;
+  offset.c[0] = frame[0];//LSB
+  offset.c[1] = frame[1];//MSB
+  PhaseState.phase_accumulator_offset = (int)(((double)offset.i/INT_MAX) * STRIDE);
+
+  // Resetting so that these changes take effect immediatly.
+  PhaseState.phase_accumulator = PhaseState.phase_accumulator_offset;
+  PhaseState.first_reading = 1;
 }
 
 static void cmdSetSma(unsigned char status, unsigned char length, unsigned char *frame)
@@ -350,7 +370,7 @@ static void cmdRunTrial(unsigned char status, unsigned char length, unsigned cha
 
     // Reset internal counter for halleffect
     PhaseState.first_reading = 1;
-    PhaseState.phase_accumulator = 0;
+    PhaseState.phase_accumulator = PhaseState.phase_accumulator_offset;
     PhaseState.strides = 0;
     PhaseState.last_phase = encGetPos();
 
@@ -918,7 +938,7 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 
   // Reset the zero point
   if (PhaseState.first_reading == 1) {
-    PhaseState.phase_accumulator = 0;
+    PhaseState.phase_accumulator = PhaseState.phase_accumulator_offset;
     PhaseState.first_reading = 0;
   }
 
