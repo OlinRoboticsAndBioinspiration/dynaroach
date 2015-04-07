@@ -151,6 +151,10 @@ int main ( void )
     LED_2 = 1;
     delay_ms(100);
     xlSetup();
+
+    delay_ms(100);
+    encSetup();
+
     LED_1 = 1;
     LED_2 = 1;
     delay_ms(100);
@@ -175,8 +179,8 @@ int main ( void )
     LED_1 = 0;
     LED_2 = 0;
     LED_3 = 0;
-    delay_ms(100);
-    encSetup();
+//    delay_ms(100);
+ //   encSetup();
     LED_1 = 1;
     delay_ms(100);
     attSetup(1.0/TIMER1_FCY);

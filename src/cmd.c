@@ -599,10 +599,12 @@ static void cmdNop(unsigned char status, unsigned char length, unsigned char *fr
 static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame) {
     LED_2 = ~LED_2;
 
+    CRITICAL_SECTION_START
     uByte2 halldata;
     halldata.sval = encGetPos();
     send(status, 2, halldata.cval, CMD_HALL_CURRENT_POS);
     LED_2 = ~LED_2;
+    CRITICAL_SECTION_END
 }
 
 static void cmdGetPhaseAccum(unsigned char status, unsigned char length, unsigned char *frame) {
@@ -638,6 +640,7 @@ static void send(unsigned char status, unsigned char length, unsigned char *fram
 
 void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
 {
+
     uByte4 t_ticks, yaw, pitch, roll;
     uByte2 bemf, v_batt;
     uByte4 halldata;
@@ -806,7 +809,9 @@ void __attribute__((interrupt, no_auto_psv)) _T1Interrupt(void)
         buffer[27] = v_batt.cval[0];
         buffer[28] = v_batt.cval[1];
 
+        CRITICAL_SECTION_START
         gyroDumpData(buffer+29);
+        CRITICAL_SECTION_END
 
         dfmemWriteBuffer(buffer, kDataLength, MemLoc.index.byte, buf_idx);
         MemLoc.index.byte += kDataLength;
@@ -896,12 +901,15 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
     sendCurrentSensors();
   }
 
+  CRITICAL_SECTION_START
   int cur_phase = encGetPos();
+  CRITICAL_SECTION_END
 
   int hall_diff = cur_phase - PhaseState.last_phase;
 
-  if (abs(hall_diff) > FULLROT/2) {
-    int sign_diff = abs(hall_diff) / hall_diff;
+  int abs_hall_diff = abs(hall_diff);
+  if (abs_hall_diff > FULLROT/2) {
+    int sign_diff = abs_hall_diff / hall_diff;
     hall_diff += FULLROT * -sign_diff;
   }
 
@@ -923,6 +931,7 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
     MD_LED_2 = 0;
     mcSetDutyCycle(1, MotorConfig.phase_2);
   }
+
 
   _T2IF = 0;
 }
