@@ -432,13 +432,16 @@ class Trial():
                 elif (int(st[1]) == cmd.SET_PHASE_OFFSET):
                     offset_in_deg = float(st[2])
                     normed_offset = (offset_in_deg / 360.0) * (2**15)
+                    print normed_offset
                     i_0 = int(normed_offset)%256
                     i_1 = int(normed_offset)/256
+                    print i_0, i_1
                     print "Got a phase accumulator"
+                    # Bad hack. Currently only supports sending 4 values and only 4 values
                     self.state_transitions.append(StateTransition(int(st[0]),\
                                                                   int(st[1]),\
                                                                   [i_0,\
-                                                                  i_1]))
+                                                                  i_1, 0, 0]))
 
                 else:
                   self.state_transitions.append(StateTransition(int(st[0]),\
