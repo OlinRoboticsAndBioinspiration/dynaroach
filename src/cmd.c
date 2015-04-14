@@ -56,6 +56,9 @@ static struct {
   int last_phase;
   // On first reading
   int first_reading;
+  // Battery voltage in ADC counts to adjust by
+  float battery_adjust;
+
 } PhaseState;
 
 unsigned volatile int ADCBuffer[1] __attribute__((space(dma)));
@@ -148,6 +151,7 @@ void cmdSetup(void)
 
     MotorConfig.phase_1 = 0;
     MotorConfig.phase_2 = 0;
+    PhaseState.battery_adjust = 1.0;
 
     trial_running = 0;
 }
@@ -188,7 +192,7 @@ static void cmdSetPhaseOffset(unsigned char status, unsigned char length, unsign
   intT offset;
   offset.c[0] = frame[0];//LSB
   offset.c[1] = frame[1];//MSB
-  PhaseState.phase_accumulator_offset = (int)(((double)offset.i/INT_MAX) * STRIDE);
+  PhaseState.phase_accumulator_offset = (((double)offset.i/INT_MAX) * STRIDE);
 
   // Resetting so that these changes take effect immediatly.
   PhaseState.phase_accumulator = PhaseState.phase_accumulator_offset;
@@ -373,6 +377,18 @@ static void cmdRunTrial(unsigned char status, unsigned char length, unsigned cha
     PhaseState.phase_accumulator = PhaseState.phase_accumulator_offset;
     PhaseState.strides = 0;
     PhaseState.last_phase = encGetPos();
+
+
+    //Sample battery voltage
+    AD1CHS0bits.CH0SA = 0b00000;      //Select AN0 (battery voltage) for sampling
+    AD1CON1bits.SAMP = 1;
+    while(!AD1CON1bits.DONE);
+    AD1CON1bits.SAMP = 0;
+    AD1CON1bits.DONE = 0;
+    float battery_voltage = ((int) ADC1BUF0 * 2 * 3.3 / 1023.0);
+    float percent = (3.3 / battery_voltage);
+    PhaseState.battery_adjust = percent;
+
 
     trial_running = 1;
 
@@ -944,14 +960,18 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 
   int32_t percent = labs((PhaseState.phase_accumulator % STRIDE));
 
+  // TODO using floating point math for convenience. This is bad and slow,
+  // Especially in an interrupt
+  float phase;
   if (percent > STRIDE/((int32_t) 2)) {
     MD_LED_2 = 1;
-    mcSetDutyCycle(1, MotorConfig.phase_1);
+    phase = MotorConfig.phase_1;
   } else {
     MD_LED_2 = 0;
-    mcSetDutyCycle(1, MotorConfig.phase_2);
+    phase = MotorConfig.phase_2;
   }
 
+  mcSetDutyCycle(1, phase * PhaseState.battery_adjust);
 
   _T2IF = 0;
 }
