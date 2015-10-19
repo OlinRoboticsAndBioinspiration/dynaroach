@@ -20,9 +20,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-
+#include "wii.h"
 
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
+#define FLASH_16MBIT_BYTES_PER_PAGE         528
 
 
 //#define ROBOT 0
@@ -31,6 +32,9 @@
 #define STRIDE ((int32_t) 81920) //2**14 * 5
 #define FULLROT 16384
 
+#define SRC_ADDR_LOC        0x400 
+
+volatile unsigned int last_addr;
 
 static union {
     struct {
@@ -69,6 +73,30 @@ static uByte2 sample_cnt;
 static int streamMod = 0;
 static int is_data_streaming = 0;
 
+unsigned int get_src_addr(void){
+    TBLPAG = 0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC);
+    return addr;
+}
+
+unsigned int get_basestation_addr(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+2);
+    return addr;
+}
+
+unsigned int get_pan_id(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+4);
+    return addr;
+}
+
+unsigned int get_channel(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+6);
+    return addr;
+}
+
 void(*cmd_func[MAX_CMD_FUNC_SIZE])(unsigned char, unsigned char, unsigned char*);
 
 StateTransition* stTable;
@@ -102,8 +130,8 @@ static void cmdSetPhaseOffset(unsigned char status, unsigned char length, unsign
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdGetPhaseAccum(unsigned char status, unsigned char length, unsigned char *frame);
-static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
-
+//static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
+static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 //Delete these once trackable management code is working
 
 static unsigned char tls = 0;
@@ -143,6 +171,7 @@ void cmdSetup(void)
     cmd_func[CMD_SET_PHASE_OFFSET] = &cmdSetPhaseOffset;
     cmd_func[CMD_RESET] = &cmdReset;
     cmd_func[CMD_TEST_SWEEP] = &cmdTestSweep;
+    cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
     cmd_func[CMD_GET_PHASE_ACCUM] = &cmdGetPhaseAccum;
 
@@ -157,6 +186,20 @@ void encoderZeroSet(void) {
     PhaseState.first_reading = 1;
     PhaseState.last_phase = 0;
     PhaseState.strides = 0;
+}
+
+void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
+    unsigned char * wii_ptr; 
+    WiiBlob Blobs[4]; 
+    int keep_sending = frame[0];
+
+    while(keep_sending)
+    {
+        wii_ptr= wiiReadData();
+        delay_ms(100);
+        send(status, 12, wii_ptr, CMD_WII_DUMP);
+    }
+
 }
 
 static void cmdSetMotor(unsigned char status, unsigned char length, unsigned char *frame)
@@ -212,7 +255,7 @@ static void cmdSetSma(unsigned char status, unsigned char length, unsigned char 
 }
 
 
-void cmdHandleRadioRxBuffer(void)
+unsigned int cmdHandleRadioRxBuffer(void)
 {
     MacPacket packet;
     Payload pld;
@@ -230,7 +273,7 @@ void cmdHandleRadioRxBuffer(void)
         }
         radioReturnPacket(packet);
     }
-    return;
+    return 1;
 }
 
 static void cmdTxSavedData(unsigned char status, unsigned char length, unsigned char *frame)
@@ -636,7 +679,7 @@ static void cmdGetPhaseAccum(unsigned char status, unsigned char length, unsigne
     LED_2 = ~LED_2;
 }
 
-static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type)
+void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type)
 {
     MacPacket packet;
     Payload pld;
@@ -955,3 +998,4 @@ void __attribute__((interrupt, no_auto_psv)) _T2Interrupt(void)
 
   _T2IF = 0;
 }
+

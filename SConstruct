@@ -1,6 +1,6 @@
 import os
 
-xcCompiler = "/opt/microchip/xc16/v1.20/"
+xcCompiler = "/opt/microchip/xc16/v1.11/"
 imageProc = "../imageproc-lib"
 
 assemblerFlags = "-Wa,-g" #pulled from makefile
@@ -28,7 +28,9 @@ env.Append(BUILDERS = {'List' : list})
 
 imageProcLibFiles = [imageProc + "/" + n for n in [ 
     "dfmem.c",
+    "queue.c",
     "gyro.c",
+    "wii.c",
     "i2c_driver.c",
     "payload.c",
     "radio.c",

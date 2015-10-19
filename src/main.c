@@ -36,7 +36,7 @@
 #include "spi_controller.h"
 #include "cmd.h"
 #include "ams-enc.h"
-
+#include "exc.h"
 
 void initDma0(void)
 {
@@ -80,6 +80,21 @@ static void timer2Setup(void)
     ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
     _T2IE = 1;
 }
+
+static void timer7Setup(void)
+{
+    T7CONbits.TON = 0; // Disable Timer
+    T7CONbits.TCS = 0; // Select internal instruction cycle clock 
+    T7CONbits.TGATE = 0; // Disable Gated Timer mode
+    T7CONbits.TCKPS = 0b01; // Select 1:64 Prescaler
+    TMR7 = 0x00; // Clear timer register
+    PR7 = 9999; //9999= 0.002/(25e-9*8)//0x04E2; //(unsigned int)0x04E2; // Load the period value (0.002s=500Hz) PR1= 0.002/(25e-9*64)-1
+    IPC12bits.T7IP = 0x04; //priority
+    IFS3bits.T7IF = 0; //Flag =0
+    IEC3bits.T7IE = 1; //Enable interrupt
+    T7CONbits.TON = 0; //Get called in Hall Function 
+}
+
 int main ( void )
 {
     /* Initialization */
@@ -146,7 +161,7 @@ int main ( void )
     mcSetup();
     LED_1 = 1;
     delay_ms(100);
-    gyroSetup();
+    //gyroSetup();
     LED_1 = 0;
     LED_2 = 1;
     delay_ms(100);
@@ -201,12 +216,67 @@ int main ( void )
     MD_LED_2 = 0;
 
     encoderZeroSet();
+    LED_2 = 0;
+    wiiSetupBasic();
+    LED_3 = 0;
+    cmdSetup();
+    excSetup();
 
     //radioDeleteQueues();
     while(1){
         cmdHandleRadioRxBuffer();
         radioProcess();
+        cmdHandleExcBuffer();
     }
     return 0;
+
+    // void set_zero()
+// {
+//     unsigned char *zero_pos = encGetPos();//get current position- this will be new zero
+
+//     //set programming enable
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x03);
+//     i2cSendByte(2,0x01);
+//     i2cEndTx(2);
+
+//     //write zero to correct register
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x16);
+//     i2cSendByte(2,zero_pos[0]);
+//     i2cSendByte(2,zero_pos[1]);
+//     i2cEndTx(2);
+
+//     //set burn enable
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x03);
+//     i2cSendByte(2,0x08);
+//     i2cEndTx(2);
+
+//     zero_pos = encGetPos();
+
+//     int pos;
+//     pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+
+//     if(pos == 0){
+//      LED_2 = ~LED_2;
+//     }
+
+//     //set verify bit
+//     i2cStartTx(2);
+//     i2cSendByte(2,0x81);
+//     i2cSendByte(2,0x03);
+//     i2cSendByte(2,0x40);
+//     i2cEndTx(2);
+
+//     pos = ((zero_pos[1]<<6)+(zero_pos[0] & 0x3F));
+
+//     if(pos == 0){
+//      LED_2 = ~LED_2;
+//     }
+// }
 }
 
