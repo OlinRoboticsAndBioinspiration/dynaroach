@@ -12,7 +12,8 @@ import math
 
 from serial import Serial, SerialException
 import numpy as np
-
+from pyqtgraph.Qt import QtGui, QtCore, USE_PYSIDE
+import pyqtgraph as pg
 from struct import pack, unpack
 from operator import attrgetter
 
@@ -21,8 +22,8 @@ from lib.basestation import BaseStation
 from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
-DEFAULT_DEST_ADDR = '\x00\x15'
-DEFAULT_DEV_NAME = '/dev/tty.usbserial-A8THYF0S' #Dev ID for ORANGE antenna base station
+DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEV_NAME = '/dev/ttyUSB4' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
 SMA_LEFT =  1
@@ -38,6 +39,8 @@ XL_CNTS_PER_G       = 256.0
 G                   = 9.81
 BEMF_VOLTS_PER_CNT  = 3.3/512
 VBATT_VOLTS_PER_CNT = 3.3/512
+
+PAGE_SIZE_16MBIT = 528
 
 
 class DynaRoach():
@@ -67,6 +70,26 @@ class DynaRoach():
 
         self.radio = BaseStation(dev_name, baud_rate, dest_addr, self.receive)
         self.receive_callback = []
+        self.acc_res = [(0,0,0),(0,0,0)]
+        self.gyro_res = [(0,0,0),(0,0,0)]
+        self.bemf = 0
+
+        self.hall_avr_speed = []
+        self.hall_times=[]
+        self.hall_encdata = []
+
+        self.dflash_string = ""
+        self.vbatt = 0
+        self.dfmem_page_size = PAGE_SIZE_16MBIT
+
+        self.wiidata=[]
+
+        self.measurement = []
+        self.dot_pos = int(1023/2)
+        self.error = 0
+
+        self.num_obs = 1
+        self.has_new_wiidata = False
 
     def add_receive_callback(self, callback):
         self.receive_callback.append(callback)
@@ -78,9 +101,15 @@ class DynaRoach():
         data = pld.data
         for callback in self.receive_callback:
             callback(pld)
+        print(typeID)
+
+        if typeID == cmd.STATUS_UNUSED:
+            print("Checkin")
+
 
         if typeID == cmd.TEST_ACCEL or typeID == cmd.TEST_GYRO:
-            print unpack('<3h', data)
+            print(cmd.TEST_GYRO)
+            #print unpack('<3h', data) this line is erroring with "unpack requires a string argument of length 6"
         elif typeID == cmd.TEST_DFLASH:
             print ''.join(data)
         elif typeID == cmd.TEST_BATT:
@@ -101,10 +130,37 @@ class DynaRoach():
         elif typeID == cmd.GET_GYRO_CALIB_PARAM:
             self.gyro_offsets = list(unpack('<fff', data))
             print(self.gyro_offsets)
+        elif typeID == cmd.WII_DUMP:
+            self.num_obs = self.num_obs+1
+            self.wiidata = unpack('12B',data)
+            self.has_new_wiidata = True
+            print(self.wiidata)
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
               datum = list(unpack('<L3f3h2HB4H', data))
               print datum[6:]
+        elif typeID ==cmd.TX_HALLENC:
+            self.hall_encdata = unpack('<3L',data)
+            print(self.hall_encdata)
+                #time= self.hall_encdata[0] #in seconds
+                #datum = self.hall_encdata[1]#degrees
+                #output = self.hall_encdata[2]
+                #things= [self.hall_encdata,self.data_cnt]
+                #print(datum)
+                #print(datum)
+                #print(time)
+                #print(self.data_cnt)
+                #f(self.data_cnt % 44 != 4 or self.data_cnt % 44 != 5):
+                 #  self.hall_times.append(time) #will be converted to seconds later
+                   #self.interm_state_data.append(datum)#things
+                   # self.output_state_data.append(output)
+                
+                #self.data_cnt += 1
+            #print(things)
+            # if self.data_cnt % 1500 == 0:
+            #   print self.data_cnt, "/", self.last_sample_count
+        else:
+            print("msg" + typeID);
 
 
     def echo(self):
@@ -154,6 +210,70 @@ class DynaRoach():
       cmd_data = str(pack('h', int(max_int * normal_offset)))
       self.radio.send(cmd.STATUS_UNUSED, cmd.SET_PHASE_OFFSET, cmd_data)
       time.sleep(0.5)
+
+    def wii_dump(self, s_to_run = 1000):
+        i = 0
+        app = QtGui.QApplication([])
+        mw = QtGui.QMainWindow()
+        mw.resize(1024,1024)
+        view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
+        mw.setCentralWidget(view)
+        mw.show()
+        mw.setWindowTitle('WiiData')
+        box = view.addPlot()
+        wii = pg.ScatterPlotItem(size = 10, brush = pg.mkBrush(255, 255, 255, 120)) #, clear= False)
+
+        blob_data = np.zeros(shape = (4,3))
+        self.wiidata = [0]*12
+        sclb = 1 #0.35294
+        sclx = 1
+        scly = 1
+
+        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["1"])
+        now = int(round(time.time() * 1000000)) 
+        end = now + s_to_run
+        print(end)
+
+        while(end > now):
+            while(self.wiidata != None):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
+                
+                if(self.has_new_wiidata):
+
+                    print('capture'+str(i))
+
+                    for j in range(4):
+
+                        ind = 3*j
+                        sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
+                        #print sread
+                        blob_data[j] = [int((sread[2][2:4]+sread[0]),2),int((sread[2][:2]+sread[1]),2),int(sread[2][4:8],2)]
+
+                        if blob_data[j][0] == 1023: #Invalid Blob will hit 'blob x not found print
+                            #print('blob'+' '+str(j+1)+' '+'not found')
+                            blob_data[j][2] = 0
+
+                        else:
+                            print('blob'+' '+str(j+1)+' '+'is at'+str(blob_data[j][0:2])+" with size "+str(blob_data[j][2]))
+
+                    wii.addPoints(x = blob_data[:,0], y = blob_data[:,1], size = blob_data[:,2]*2, brush = 'b') # pen='w', brush='b'
+                    # wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
+                    box.addItem(wii)
+                    box.setXRange(0,1024,update= False)
+                    box.setYRange(0,1024,update= False)
+                    pg.QtGui.QApplication.processEvents()
+                    wii.clear()
+                    i+=1
+
+                    self.has_new_wiidata = False    
+
+                    now = int(round(time.time() * 1000000)) 
+                    print(now)
+
+        mw.close()
+
+        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
+        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
+        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
 
     def set_data_streaming(self, val):
       data = ''.join(chr(val));

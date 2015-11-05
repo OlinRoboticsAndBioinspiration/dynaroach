@@ -21,10 +21,10 @@
 #include <string.h>
 #include <stdint.h>
 #include "wii.h"
+#include "exc.h"
 
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
 #define FLASH_16MBIT_BYTES_PER_PAGE         528
-
 
 //#define ROBOT 0
 #define ROBOT 1
@@ -32,9 +32,7 @@
 #define STRIDE ((int32_t) 81920) //2**14 * 5
 #define FULLROT 16384
 
-#define SRC_ADDR_LOC        0x400 
-
-volatile unsigned int last_addr;
+//volatile unsigned int last_addr;
 
 static union {
     struct {
@@ -73,30 +71,6 @@ static uByte2 sample_cnt;
 static int streamMod = 0;
 static int is_data_streaming = 0;
 
-unsigned int get_src_addr(void){
-    TBLPAG = 0x0;
-    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC);
-    return addr;
-}
-
-unsigned int get_basestation_addr(void){
-    TBLPAG=0x0;
-    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+2);
-    return addr;
-}
-
-unsigned int get_pan_id(void){
-    TBLPAG=0x0;
-    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+4);
-    return addr;
-}
-
-unsigned int get_channel(void){
-    TBLPAG=0x0;
-    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+6);
-    return addr;
-}
-
 void(*cmd_func[MAX_CMD_FUNC_SIZE])(unsigned char, unsigned char, unsigned char*);
 
 StateTransition* stTable;
@@ -118,7 +92,6 @@ static void cmdTestAccel(unsigned char status, unsigned char length, unsigned ch
 static void cmdTestGyro(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdTestDflash(unsigned char status, unsigned char length, unsigned char* data);
 static void cmdEraseMemSector(unsigned char status, unsigned char length, unsigned char *frame);
-static void cmdTestHall(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdTestBatt(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdTestSweep(unsigned char status, unsigned char length, unsigned char* frame);
 static void cmdGetSampleCount(unsigned char status, unsigned char length, unsigned char *frame);
@@ -130,6 +103,7 @@ static void cmdSetPhaseOffset(unsigned char status, unsigned char length, unsign
 static void cmdReset(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdHallCurrentPos(unsigned char status, unsigned char length, unsigned char *frame);
 static void cmdGetPhaseAccum(unsigned char status, unsigned char length, unsigned char *frame);
+static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigned char *frame);
 //static void send(unsigned char status, unsigned char length, unsigned char *frame, unsigned char type);
 static void cmdWiiDump(unsigned char status, unsigned char length, unsigned char *frame);
 //Delete these once trackable management code is working
@@ -160,7 +134,7 @@ void cmdSetup(void)
     cmd_func[CMD_TEST_ACCEL] = &cmdTestAccel;
     cmd_func[CMD_TEST_GYRO] = &cmdTestGyro;
     cmd_func[CMD_TEST_DFLASH] = &cmdTestDflash;
-    cmd_func[CMD_TEST_HALL] = &cmdTestHall;
+    //cmd_func[CMD_TEST_HALL] = &cmdTestHall;
     cmd_func[CMD_TEST_BATT] = &cmdTestBatt;
     cmd_func[CMD_ERASE_MEM_SECTOR] = &cmdEraseMemSector;
     cmd_func[CMD_GET_SAMPLE_COUNT] = &cmdGetSampleCount;
@@ -174,6 +148,7 @@ void cmdSetup(void)
     cmd_func[CMD_WII_DUMP]= &cmdWiiDump;
     cmd_func[CMD_HALL_CURRENT_POS] = &cmdHallCurrentPos;
     cmd_func[CMD_GET_PHASE_ACCUM] = &cmdGetPhaseAccum;
+    cmd_func[CMD_TX_HALLENC] = &cmdTxHallEncoder; 
 
     MotorConfig.phase_1 = 0;
     MotorConfig.phase_2 = 0;
@@ -305,8 +280,12 @@ static void cmdTxSavedData(unsigned char status, unsigned char length, unsigned 
                 {
                     continue;
                 }
-                macSetDestPan(packet, NETWORK_BASESTATION_PAN_ID);
-                macSetDestAddr(packet, NETWORK_BASESTATION_ADDR);
+
+                unsigned int network_basestation_pan_id = get_pan_id();
+                unsigned int network_basestation_addr = get_basestation_addr(); //change me when last address sending is worked out
+
+                macSetDestPan(packet, network_basestation_pan_id);
+                macSetDestAddr(packet, network_basestation_addr);
                 pld = macGetPayload(packet);
                 dfmemRead(i, j, tx_data_size, payGetData(pld));
                 paySetType(pld, CMD_TX_SAVED_DATA);
@@ -495,29 +474,57 @@ static void cmdTestGyro(unsigned char status, unsigned char length, unsigned cha
     LED_1 = OFF;
 }
 
-/*****************************************************************************
-* Function Name : cmdTestHall
-* Description   : For 10 seconds, set the state of LED_2 based on the state
-*                 of the Hall effect sensor connected to RB7. User needs
-*                 to manually try to switch the state of the Hall effect
-*                 sensor. Current hardware implementation uses a latched
-*                 Hall (Melexis US1881).
-* Parameters    : status - Status field of gyro test packet (not yet used)
-*                 length - The length of the payload data array
-*                 frame - not used
-*****************************************************************************/
-static void cmdTestHall(unsigned char status, unsigned char length, unsigned char* frame)
-{
+static void cmdTxHallEncoder(unsigned char status, unsigned char length, unsigned char *frame){
 
-    //LED_2 = 0;
-    //LED_3 = 0;
-    //while(swatchToc() < 10000000)
-    //{
-    //    LED_1 = PORTBbits.RB7;
-    //}
-    //LED_2 = 1;
-    //LED_3 = 1;
-    return;
+    if(ROBOT)
+    {
+        unsigned int start_page = frame[0] + (frame[1] << 8);
+        unsigned int num_samples = frame[2] + (frame[3] << 8);
+        unsigned int tx_data_size = frame[4] + (frame[5] << 8);
+        unsigned int i, j;
+
+        MacPacket packet;
+        Payload pld;
+
+        LED_1 = 0;
+        LED_2 = 1;
+        LED_3 = 0;
+
+        unsigned int read = 0;
+        i = start_page;
+        while(read < num_samples + 100)
+        {
+            j = 0;
+            while (j + tx_data_size <= FLASH_8MBIT_BYTES_PER_PAGE) {
+                packet = radioRequestPacket(tx_data_size);
+                if(packet == NULL)
+                {
+                    continue;
+                }
+                unsigned int network_basestation_pan_id = get_pan_id();
+                unsigned int network_basestation_addr = get_basestation_addr();
+
+                macSetDestPan(packet, network_basestation_pan_id);
+                macSetDestAddr(packet, network_basestation_addr);
+                pld = macGetPayload(packet);
+                dfmemRead(i, j, tx_data_size, payGetData(pld));
+                paySetType(pld, CMD_TX_HALLENC);
+                if(radioEnqueueTxPacket(packet))
+                {
+                    radioProcess();
+                }
+                delay_ms(20);
+                j += tx_data_size;
+                read++;
+            }
+            i++;
+
+            if ((i >> 7) & 0x1) {
+                LED_1 = ~LED_1;
+                LED_2 = ~LED_2;
+            }
+        }
+    }
 }
 
 static void cmdTestBatt(unsigned char status, unsigned char length, unsigned char* frame)
@@ -689,8 +696,13 @@ void send(unsigned char status, unsigned char length, unsigned char *frame, unsi
     {
         return;
     }
-    macSetDestPan(packet, NETWORK_BASESTATION_PAN_ID);
-    macSetDestAddr(packet, NETWORK_BASESTATION_ADDR);
+
+    unsigned int network_basestation_pan_id = get_pan_id();
+    unsigned int network_basestation_addr = get_basestation_addr();
+
+    macSetDestPan(packet, network_basestation_pan_id);
+    macSetDestAddr(packet, network_basestation_addr);
+    
     pld = macGetPayload(packet);
     paySetData(pld, length, frame);
     paySetType(pld, type);

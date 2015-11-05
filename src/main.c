@@ -97,6 +97,12 @@ static void timer7Setup(void)
 
 int main ( void )
 {
+    LED_1 = 1;
+    LED_2 = 1;
+    LED_3 = 1;
+    delay_ms(500);
+    LED_1=0;
+    delay_ms(100);
     /* Initialization */
     SetupClock();
     SwitchClocks();
@@ -106,12 +112,30 @@ int main ( void )
     spicSetupChannel2();
     ppoolInit();
 
+    LED_2 = 0;
+    delay_ms(1000);
+
+    unsigned int network_src_addr = get_src_addr();
+    unsigned int network_basestation_channel = get_channel();
+    unsigned int network_basestation_pan_id = get_pan_id();
+    unsigned int network_basestation_addr = get_basestation_addr();
+
+    LED_3 = 0;
+
+    delay_ms(1000);
+
     //BEGIN RADIO SETUP
     radioInit(50, 10); // tx_queue length: 50, rx_queue length: 10
-    radioSetSrcAddr(NETWORK_SRC_ADDR);
-    radioSetSrcPanID(NETWORK_BASESTATION_PAN_ID);
-    radioSetChannel(NETWORK_BASESTATION_CHANNEL);
+    radioSetSrcAddr(network_src_addr);
+    radioSetSrcPanID(network_basestation_pan_id);
+    radioSetChannel(network_basestation_channel);
     //END RADIO SETUP
+
+    char frame[5];
+
+    send(STATUS_UNUSED, 5, frame, '4');
+    send(STATUS_UNUSED, 5, frame, '4');
+    send(STATUS_UNUSED, 5, frame, '4');
 
     //BEGIN I2C SETUP
     unsigned int I2C1CONvalue, I2C1BRGvalue;
@@ -194,8 +218,8 @@ int main ( void )
     LED_1 = 0;
     LED_2 = 0;
     LED_3 = 0;
-//    delay_ms(100);
- //   encSetup();
+ delay_ms(100);
+ encSetup();
     LED_1 = 1;
     delay_ms(100);
     attSetup(1.0/TIMER1_FCY);
@@ -217,10 +241,16 @@ int main ( void )
 
     encoderZeroSet();
     LED_2 = 0;
-    wiiSetupBasic();
+    //wiiSetupBasic();
     LED_3 = 0;
     cmdSetup();
     excSetup();
+
+    //char frame[5];
+
+    send(STATUS_UNUSED, 5, frame, '4');
+    send(STATUS_UNUSED, 5, frame, '4');
+    send(STATUS_UNUSED, 5, frame, '4');
 
     //radioDeleteQueues();
     while(1){

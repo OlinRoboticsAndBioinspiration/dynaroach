@@ -22,6 +22,8 @@
 #include "ams-enc.h"
 #include "carray.h"
 #include "cmd.h"
+#include "network.h"
+
 #define EXC_FUNC_MAX 10
 
 /*HALL ENCODER VARIABLES FOR ISR T7*/
@@ -29,6 +31,7 @@
 #define FULLROT 16384
 #define GEARRATIO 5
 #define REVTOOUTPUT 3277
+#define CAMDATALENGTH 8
 static unsigned char buf_idx = 1;
 static uByte4 curr_halldata;
 static uByte4 prev_halldata;
@@ -56,25 +59,51 @@ static WiiBlob ExcBlobs[4];
 #define FLASH_8MBIT_BYTES_PER_PAGE          264
 #define FLASH_16MBIT_BYTES_PER_PAGE         528
 
-static CircArray Exc;
+static CircArray exc;
 static unsigned char DataWrite[HALLDATALENGTH];//used to store data to be written to memory
 
 //SETTING UP THE CIRCUILAR ARRAY WITH MAX FUNC =10//
 void excSetup(){
-    Exc= carrayCreate(EXC_FUNC_MAX);
+    exc = carrayCreate(EXC_FUNC_MAX);
+}
+
+unsigned int get_src_addr(void){
+    TBLPAG = 0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC);
+    return addr;
+}
+
+unsigned int get_basestation_addr(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+2);
+    return addr;
+}
+
+unsigned int get_pan_id(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+4);
+    return addr;
+}
+
+unsigned int get_channel(void){
+    TBLPAG=0x0;
+    unsigned int addr = __builtin_tblrdl(SRC_ADDR_LOC+6);
+    return addr;
 }
 
 //Function Declaration//
 static void excGetHallEncPos(void);
 static void excGetCamData(void);
 static void excProcessCamMotor(void);
-static void excRecordData(void);
+static void excRecordHallData(void);
+static void excRecordCamData(void);
 
 //Function Pointers//
 void (*excGetHall)(void) = &excGetHallEncPos; 
 void (*excGetCam)(void) = &excGetCamData;
 void (*excProcessCam)(void) = &excProcessCamMotor;
-void (*excRecord)(void) = &excRecordData;
+void (*excRecordHall)(void) = &excRecordHallData;
+void (*excRecordCam)(void) = &excRecordCamData;
 
 static void excGetCamData(void)
 {
@@ -84,7 +113,7 @@ static void excGetCamData(void)
 }
 
 //Save data to pages 250 - n in memory
-static void excRecordData(void)
+static void excRecordHallData(void)
 {
         dfmemWriteBuffer(DataWrite, HALLDATALENGTH, numsamples*HALLDATALENGTH, buf_idx);
         numsamples++;
@@ -95,6 +124,21 @@ static void excRecordData(void)
             numsamples=0;
             mem_pg_idx++;
             hall_mem_total_cnt.sval++; //EveryTime one page worth of data was written increment one. 1pg= 44 samples
+        }       
+}
+
+//Save data to pages 250 - n in memory
+static void excRecordCamData(void)
+{
+        dfmemWriteBuffer(DataWrite,CAMDATALENGTH, numsamples*CAMDATALENGTH, buf_idx);
+        numsamples++;
+
+        if(numsamples*CAMDATALENGTH >= FLASH_8MBIT_BYTES_PER_PAGE) 
+        {   
+            dfmemWrite(DataWrite, CAMDATALENGTH, mem_pg_idx, numsamples, buf_idx);
+            numsamples=0;
+            mem_pg_idx++;
+            //hall_mem_total_cnt.sval++; //EveryTime one page worth of data was written increment one. 1pg= 44 samples
         }       
 }
 
@@ -176,7 +220,7 @@ static void excGetHallEncPos(void)
 void cmdHandleExcBuffer(void){
     void(*item)();
 
-    item = carrayPopHead(Exc);
+    item = carrayPopHead(exc);
     if(item != NULL)
     {
         item();
@@ -186,26 +230,26 @@ void cmdHandleExcBuffer(void){
 
 void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
 {   
-    if(sethall)
-    {
-        carrayAddTail(Exc,excGetHall);
-        carrayAddTail(Exc, excRecord);
-        hall_total_cnt.sval++;
-        if(hall_total_cnt.sval % 100 ==0)
-        {
-            if(0)
-            {
-                carrayAddTail(Exc,excGetCam);
+    // if(sethall)
+    // {
+    //     carrayAddTail(Exc,excGetHall);
+    //     carrayAddTail(Exc, excRecord);
+    //     hall_total_cnt.sval++;
+    //     if(hall_total_cnt.sval % 100 == 0)
+    //     {
+    //         if(0)
+    //         {
+                carrayAddTail(exc,excGetCam);
                 //carrayAddTail(Exc,excRecord);
-            }
+            //}
     
             
-            else
-            {
-                carrayAddTail(Exc,excProcessCam);
+            //else
+            //{
+                //carrayAddTail(Exc,excProcessCam);
                 //carrayAddTail(Exc,excRecord);
-            }
-        } 
-    }
+            //}
+        //} 
+    //}
     _T7IF = 0;
 }

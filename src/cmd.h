@@ -31,4 +31,4 @@ void send(unsigned char status, unsigned char length, unsigned char *frame, unsi
 
 void encoderZeroSet(void);
 
-#endif // __CMD_H
+#endif __CMD_H
