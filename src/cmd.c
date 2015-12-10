@@ -166,14 +166,15 @@ void encoderZeroSet(void) {
 void cmdWiiDump(unsigned char status, unsigned char length, unsigned char* frame){
     unsigned char * wii_ptr; 
     WiiBlob Blobs[4]; 
-    int keep_sending = frame[0];
+    T7CONbits.TON = 1;//turn on 
+    //int keep_sending = frame[0];
 
-    while(keep_sending)
-    {
-        wii_ptr= wiiReadData();
-        delay_ms(100);
-        send(status, 12, wii_ptr, CMD_WII_DUMP);
-    }
+    //if(keep_sending)
+    //{
+        // wii_ptr= wiiReadData();
+        // delay_ms(100);
+        // send(status, 12, wii_ptr, CMD_WII_DUMP);
+    //}
 
 }
 

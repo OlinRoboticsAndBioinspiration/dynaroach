@@ -41,7 +41,7 @@
 #define CMD_TEST_DFLASH             0x03
 #define CMD_TEST_MOTOR              0x04
 #define CMD_TEST_SMA                0x05
-//#define CMD_TEST_HALL               0x06
+#define CMD_TEST_HALL               0x06
 #define CMD_TEST_BATT               0x07
 #define CMD_ERASE_MEM_SECTOR        0x08
 #define CMD_GET_SAMPLE_COUNT        0x09

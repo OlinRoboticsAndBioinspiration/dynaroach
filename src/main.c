@@ -59,7 +59,7 @@ static void timer1Setup(void)
     unsigned int conf_reg;
     unsigned long period;
     conf_reg = T1_ON & T1_SOURCE_INT & T1_PS_1_256 & T1_GATE_OFF & T1_SYNC_EXT_OFF;
-    period = (unsigned int)0x271; //timer period 4ms = period/FCY * prescaler
+    period = (unsigned int)0x271; //timer period 4ms = (period/FCY) * prescaler
 
     OpenTimer1(conf_reg, period);
     ConfigIntTimer1(T1_INT_PRIOR_4 & T1_INT_OFF);
@@ -78,7 +78,8 @@ static void timer2Setup(void)
     period = (unsigned int)0x9c; //timer period .5ms = period/FCY 1 over top.
     OpenTimer2(conf_reg, period);
     ConfigIntTimer2(T2_INT_PRIOR_4 & T2_INT_OFF);
-    _T2IE = 1;
+    _T2IE = 1;//interrupt on
+    T2CONbits.TON = 0; //disable until called
 }
 
 static void timer7Setup(void)
@@ -86,13 +87,13 @@ static void timer7Setup(void)
     T7CONbits.TON = 0; // Disable Timer
     T7CONbits.TCS = 0; // Select internal instruction cycle clock 
     T7CONbits.TGATE = 0; // Disable Gated Timer mode
-    T7CONbits.TCKPS = 0b01; // Select 1:64 Prescaler
+    T7CONbits.TCKPS = 0b11; // Select 1:256 Prescaler
     TMR7 = 0x00; // Clear timer register
-    PR7 = 9999; //9999= 0.002/(25e-9*8)//0x04E2; //(unsigned int)0x04E2; // Load the period value (0.002s=500Hz) PR1= 0.002/(25e-9*64)-1
+    PR7 = (unsigned int)0x3D09; //timer period 100ms
     IPC12bits.T7IP = 0x04; //priority
     IFS3bits.T7IF = 0; //Flag =0
     IEC3bits.T7IE = 1; //Enable interrupt
-    T7CONbits.TON = 0; //Get called in Hall Function 
+    T7CONbits.TON = 0; //Get called in Wii_dump function
 }
 
 int main ( void )
@@ -183,6 +184,7 @@ int main ( void )
 
     delay_ms(100);
     mcSetup();
+    send(STATUS_UNUSED, 5, frame, '1');
     LED_1 = 1;
     delay_ms(100);
     //gyroSetup();
@@ -190,36 +192,41 @@ int main ( void )
     LED_2 = 1;
     delay_ms(100);
     xlSetup();
-
+    send(STATUS_UNUSED, 5, frame, '2');
     delay_ms(100);
     encSetup();
-
+    send(STATUS_UNUSED, 5, frame, '3');
     LED_1 = 1;
     LED_2 = 1;
     delay_ms(100);
     dfmemSetup();
+    send(STATUS_UNUSED, 5, frame, '4');
     LED_1 = 0;
     LED_2 = 0;
     LED_3 = 1;
     delay_ms(100);
     sclockSetup();
+    send(STATUS_UNUSED, 5, frame, '5');
     LED_1 = 1;
     delay_ms(100);
     timer1Setup();
+    send(STATUS_UNUSED, 5, frame, '6');
     LED_1 = 0;
     LED_2 = 1;
     delay_ms(100);
     timer2Setup();
+    send(STATUS_UNUSED, 5, frame, '7');
     LED_1 = 1;
     LED_2 = 1;
     delay_ms(100);
-    cmdSetup();
+    timer7Setup();
+    send(STATUS_UNUSED, 5, frame, '8');
     MD_LED_1 = 1;
     LED_1 = 0;
     LED_2 = 0;
     LED_3 = 0;
- delay_ms(100);
- encSetup();
+    delay_ms(100);
+
     LED_1 = 1;
     delay_ms(100);
     attSetup(1.0/TIMER1_FCY);
@@ -241,22 +248,19 @@ int main ( void )
 
     encoderZeroSet();
     LED_2 = 0;
-    //wiiSetupBasic();
+    wiiSetupBasic();
+    send(STATUS_UNUSED, 5, frame, '9');
     LED_3 = 0;
     cmdSetup();
-    excSetup();
-
-    //char frame[5];
 
     send(STATUS_UNUSED, 5, frame, '4');
     send(STATUS_UNUSED, 5, frame, '4');
     send(STATUS_UNUSED, 5, frame, '4');
 
-    //radioDeleteQueues();
     while(1){
         cmdHandleRadioRxBuffer();
         radioProcess();
-        cmdHandleExcBuffer();
+        excHandleBuffer();
     }
     return 0;
 

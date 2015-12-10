@@ -97,6 +97,7 @@ static void excGetCamData(void);
 static void excProcessCamMotor(void);
 static void excRecordHallData(void);
 static void excRecordCamData(void);
+static void excLightUpTest(void);
 
 //Function Pointers//
 void (*excGetHall)(void) = &excGetHallEncPos; 
@@ -104,12 +105,21 @@ void (*excGetCam)(void) = &excGetCamData;
 void (*excProcessCam)(void) = &excProcessCamMotor;
 void (*excRecordHall)(void) = &excRecordHallData;
 void (*excRecordCam)(void) = &excRecordCamData;
+void (*excLightUp)(void) = &excLightUpTest;
+
+
+char frame[5];
 
 static void excGetCamData(void)
 {
     exc_wii_ptr = wiiReadData();
-    delay_ms(100);
+    LED_3 = ~LED_3;
     send(STATUS_UNUSED, 12, exc_wii_ptr, CMD_WII_DUMP);
+}
+
+static void excLightUpTest(void)
+{
+    LED_2 = ~LED_2;
 }
 
 //Save data to pages 250 - n in memory
@@ -146,12 +156,12 @@ static void excProcessCamMotor(void)
 {
     
     exc_wii_ptr = wiiReadData();
-    delay_ms(100);
+    //delay_ms(100);
     send(STATUS_UNUSED, 12, exc_wii_ptr, CMD_WII_DUMP);
     curr_blobxpos = ((exc_wii_ptr[2] & 0x30)<<8) +(exc_wii_ptr[0]);
     if(curr_blobxpos != 0x3FF && curr_blobxpos !=0)
     {
-        if (curr_blobxpos>prev_blobxpos )
+        if (curr_blobxpos>prev_blobxpos)
         {
             curr_speed -= 0.2;
             mcSetDutyCycle(1,curr_speed);
@@ -217,7 +227,7 @@ static void excGetHallEncPos(void)
 }
 
 //Handles the EXC carray (internal sampling sensors)
-void cmdHandleExcBuffer(void){
+void excHandleBuffer(void){
     void(*item)();
 
     item = carrayPopHead(exc);
@@ -239,7 +249,17 @@ void __attribute__((interrupt, no_auto_psv)) _T7Interrupt(void)
     //     {
     //         if(0)
     //         {
-                carrayAddTail(exc,excGetCam);
+
+                LED_3 = carrayIsEmpty(exc);//this should always be on
+                LED_1 = ~LED_1;
+                carrayAddTail(exc,excLightUp);
+                send(STATUS_UNUSED, 5, frame, carrayGetSize(exc)+'0');
+                LED_2 = !carrayIsEmpty(exc);//should always be on
+
+                //carrayAddTail(exc,excGetCam);
+                //carrayAddTail(exc,excProcessCamMotor);
+
+
                 //carrayAddTail(Exc,excRecord);
             //}
     

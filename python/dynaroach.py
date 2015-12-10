@@ -22,7 +22,7 @@ from lib.basestation import BaseStation
 from lib.payload import Payload
 
 DEFAULT_BAUD_RATE = 230400
-DEFAULT_DEST_ADDR = '\x00\x12'
+DEFAULT_DEST_ADDR = '\x00\x11'
 DEFAULT_DEV_NAME = '/dev/ttyUSB4' #Dev ID for ORANGE antenna base station
 
 SMA_RIGHT = 0
@@ -105,6 +105,7 @@ class DynaRoach():
 
         if typeID == cmd.STATUS_UNUSED:
             print("Checkin")
+            print unpack('c',data)
 
 
         if typeID == cmd.TEST_ACCEL or typeID == cmd.TEST_GYRO:
@@ -133,7 +134,7 @@ class DynaRoach():
         elif typeID == cmd.WII_DUMP:
             self.num_obs = self.num_obs+1
             self.wiidata = unpack('12B',data)
-            self.has_new_wiidata = True
+            #self.has_new_wiidata = True
             print(self.wiidata)
         elif cmd.DATA_STREAMING:
             if (len(data) == 35):
@@ -213,15 +214,15 @@ class DynaRoach():
 
     def wii_dump(self, s_to_run = 1000):
         i = 0
-        app = QtGui.QApplication([])
-        mw = QtGui.QMainWindow()
-        mw.resize(1024,1024)
-        view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
-        mw.setCentralWidget(view)
-        mw.show()
-        mw.setWindowTitle('WiiData')
-        box = view.addPlot()
-        wii = pg.ScatterPlotItem(size = 10, brush = pg.mkBrush(255, 255, 255, 120)) #, clear= False)
+        # app = QtGui.QApplication([])
+        # mw = QtGui.QMainWindow()
+        # mw.resize(1024,1024)
+        # view = pg.GraphicsLayoutWidget()  ## GraphicsView with GraphicsLayout inserted by default
+        # mw.setCentralWidget(view)
+        # mw.show()
+        # mw.setWindowTitle('WiiData')
+        # box = view.addPlot()
+        # wii = pg.ScatterPlotItem(size = 10, brush = pg.mkBrush(255, 255, 255, 120)) #, clear= False)
 
         blob_data = np.zeros(shape = (4,3))
         self.wiidata = [0]*12
@@ -230,50 +231,50 @@ class DynaRoach():
         scly = 1
 
         self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["1"])
-        now = int(round(time.time() * 1000000)) 
-        end = now + s_to_run
-        print(end)
+        # now = int(round(time.time() * 1000000)) 
+        # end = now + s_to_run
+        # print(end)
 
-        while(end > now):
-            while(self.wiidata != None):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
+        # while(end > now):
+        #     while(self.wiidata != None):#self.num_obs % 5000):# when need a continuous Set the number in order to change the frame
                 
-                if(self.has_new_wiidata):
+        #         if(self.has_new_wiidata):
 
-                    print('capture'+str(i))
+        #             print('capture'+str(i))
 
-                    for j in range(4):
+        #             for j in range(4):
 
-                        ind = 3*j
-                        sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
-                        #print sread
-                        blob_data[j] = [int((sread[2][2:4]+sread[0]),2),int((sread[2][:2]+sread[1]),2),int(sread[2][4:8],2)]
+        #                 ind = 3*j
+        #                 sread = [bin(x)[2:].zfill(8) for x in self.wiidata[ind:ind+3]]
+        #                 #print sread
+        #                 blob_data[j] = [int((sread[2][2:4]+sread[0]),2),int((sread[2][:2]+sread[1]),2),int(sread[2][4:8],2)]
 
-                        if blob_data[j][0] == 1023: #Invalid Blob will hit 'blob x not found print
-                            #print('blob'+' '+str(j+1)+' '+'not found')
-                            blob_data[j][2] = 0
+        #                 if blob_data[j][0] == 1023: #Invalid Blob will hit 'blob x not found print
+        #                     #print('blob'+' '+str(j+1)+' '+'not found')
+        #                     blob_data[j][2] = 0
 
-                        else:
-                            print('blob'+' '+str(j+1)+' '+'is at'+str(blob_data[j][0:2])+" with size "+str(blob_data[j][2]))
+        #                 else:
+        #                     print('blob'+' '+str(j+1)+' '+'is at'+str(blob_data[j][0:2])+" with size "+str(blob_data[j][2]))
 
-                    wii.addPoints(x = blob_data[:,0], y = blob_data[:,1], size = blob_data[:,2]*2, brush = 'b') # pen='w', brush='b'
-                    # wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
-                    box.addItem(wii)
-                    box.setXRange(0,1024,update= False)
-                    box.setYRange(0,1024,update= False)
-                    pg.QtGui.QApplication.processEvents()
-                    wii.clear()
-                    i+=1
+        #             # wii.addPoints(x = blob_data[:,0], y = blob_data[:,1], size = blob_data[:,2]*2, brush = 'b') # pen='w', brush='b'
+        #             # # wii.addPoints(x=self.dot_pos, y=b[:,1], size=b[:,2],brush='r')
+        #             # box.addItem(wii)
+        #             # box.setXRange(0,1024,update= False)
+        #             # box.setYRange(0,1024,update= False)
+        #             # pg.QtGui.QApplication.processEvents()
+        #             #wii.clear()
+        #             i+=1
 
-                    self.has_new_wiidata = False    
+        #             self.has_new_wiidata = False    
 
-                    now = int(round(time.time() * 1000000)) 
-                    print(now)
+        #             now = int(round(time.time() * 1000000)) 
+        #             print(now)
 
-        mw.close()
+        # #mw.close()
 
-        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
-        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
-        self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
+        # self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
+        # self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
+        # self.radio.send(cmd.STATUS_UNUSED,cmd.WII_DUMP,["0"])
 
     def set_data_streaming(self, val):
       data = ''.join(chr(val));
